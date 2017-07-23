@@ -1,0 +1,7 @@
+[requires]
+jsoncpp/1.7.5@theirix/stable
+glm/0.9.8.4@coding3d/stable
+
+[generators]
+cmake
+visual_studio
