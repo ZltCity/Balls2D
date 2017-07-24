@@ -1,4 +1,9 @@
-cmake-build*
-.idea
+bin/
+lib/
+ext/
+build/
+msvs2015/
+cmake-build*/
+.idea/
 conanbuild*
 conaninfo*
