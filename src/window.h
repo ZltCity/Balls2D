@@ -7,6 +7,7 @@
 class Window {
 public:
   friend class GLContext;
+  friend class Renderer2D;
 
   Window() = default;
   Window(const std::string &title, int x, int y, int w, int h);

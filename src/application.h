@@ -15,9 +15,6 @@ public:
   virtual void  onFrame()     = 0;
 
 private:
-  Application(const Application &)  = delete;
-  Application(const Application &&) = delete;
-
-  Application &operator=(const Application &)   = delete;
-  Application &operator=(const Application &&)  = delete;
+  Application(const Application &)            = delete;
+  Application &operator=(const Application &) = delete;
 };

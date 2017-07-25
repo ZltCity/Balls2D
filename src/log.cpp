@@ -19,11 +19,11 @@ Log &Log::instance() {
 void Log::print(int type, const std::string &message)
 {
   auto printTime = [](std::fstream &file) {
-    time_t   t        = std::time(nullptr);
-    tm      *l        = std::localtime(&t);
+    time_t   time     = std::time(nullptr);
+    tm      *local    = std::localtime(&time);
     char     buff[24] = { 0x00 };
 
-    std::strftime(buff, sizeof(buff), "%d.%m.%Y %H:%M:%S", l);
+    std::strftime(buff, sizeof(buff), "%d.%m.%Y %H:%M:%S", local);
     file << buff;
   };
 

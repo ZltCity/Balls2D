@@ -39,16 +39,16 @@ int Application::start(int argc, char **argv)
 {
   this->onStart();
 
-  SDL_Event e;
-  bool      q = false;
+  SDL_Event event;
+  bool      quit = false;
 
-  while (!q) {
+  while (!quit) {
     this->onPreFrame();
 
-    while (SDL_PollEvent(&e))
-      switch (e.type) {
+    while (SDL_PollEvent(&event))
+      switch (event.type) {
         case SDL_QUIT: {
-          q = true;
+          quit = true;
           break;
         }
       }

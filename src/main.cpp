@@ -1,28 +1,26 @@
+#include <ctime>
+#include <cstdlib>
+
 #include "application.h"
 #include "gl_context.h"
+#include "graphics.h"
 #include "window.h"
+#include "file.h"
 #include "log.h"
+
+#include "particle.h"
+
+const int SCREEN_WIDTH  = 800,
+          SCREEN_HEIGHT = 800,
+          SCREEN_X      = 50,
+          SCREEN_Y      = 50;
 
 class MyApplication : public Application {
 public:
   MyApplication() {}
 
   void onStart() {
-    Log &log = Log::instance();
-
-    if (this->w.create(std::string("SDL test"), 60, 60, 640, 480))
-      log.print(LOG_INFO, std::string("Main window creation succeed."));
-    else {
-      log.print(LOG_CRIT, std::string("Main window creation failed."));
-      std::exit(EXIT_FAILURE);
-    }
-
-    if (this->c.create(this->w))
-      log.print(LOG_INFO, std::string("OpenGL context creation succeed."));
-    else {
-      log.print(LOG_CRIT, std::string("OpenGL context creation failed."));
-      std::exit(EXIT_FAILURE);
-    }
+    this->init();
   }
   int onQuit() {
     return 0;
@@ -31,14 +29,71 @@ public:
   void onPreFrame()   {}
   void onPostFrame()  {}
   void onFrame() {
-    glClearColor(0.3f, 0.6f, 0.45f, 1.0f);
+    glm::vec4 c = this->glpreset.color;
+
+    glClearColor(c.r, c.g, c.b, c.a);
     glClear(GL_COLOR_BUFFER_BIT);
-    this->w.present();
+
+    this->mainWnd.present();
   }
 
 private:
-  Window    w;
-  GLContext c;
+  Window      mainWnd;
+  GLContext   glContext;
+  GLPreset    glpreset;
+
+  //std::vector<glm::ivec2> ps;
+
+  void init() {
+    this->createWidnow();
+    this->createGLContext();
+    this->loadResources();
+    //
+    /*std::srand(static_cast<unsigned int>(std::time(nullptr)));
+
+    for (int i = 0; i < 5000; ++i) {
+      this->ps.push_back(glm::ivec2(std::rand() % SCREEN_WIDTH, std::rand() % SCREEN_HEIGHT));
+    }*/
+  }
+
+  void free() {
+  }
+
+  void createWidnow() {
+    Log &log = Log::instance();
+
+    if (this->mainWnd.create(std::string("Some shitty physics, v1.0"), SCREEN_X, SCREEN_Y, SCREEN_WIDTH, SCREEN_HEIGHT))
+      log.print(LOG_INFO, std::string("Main window creation succeed."));
+    else {
+      log.print(LOG_CRIT, std::string("Main window creation failed."));
+      std::exit(EXIT_FAILURE);
+    }
+  }
+
+  void createGLContext() {
+    Log &log = Log::instance();
+
+    if (this->glContext.create(this->mainWnd))
+      log.print(LOG_INFO, std::string("OpenGL context creation succeed."));
+    else {
+      log.print(LOG_CRIT, std::string("OpenGL context creation failed."));
+      std::exit(EXIT_FAILURE);
+    }
+  }
+
+  void loadResources()  {
+    Log   &log  = Log::instance();
+    auto  p     = loadGLPreset(std::string("preset.json"));
+
+    if (p.first)
+      log.print(LOG_INFO, std::string("OpenGL preset loading succeed."));
+    else {
+      log.print(LOG_CRIT, std::string("OpenGL preset loading failed."));
+      std::exit(EXIT_FAILURE);
+    }
+
+    this->glpreset = p.second;
+  }
 };
 
 int main(int argc, char **argv) {
