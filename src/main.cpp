@@ -29,7 +29,7 @@ public:
   void onPreFrame()   {}
   void onPostFrame()  {}
   void onFrame() {
-    glm::vec4 c = this->glpreset.color;
+    glm::vec4 c = this->glpreset.getColor();
 
     glClearColor(c.r, c.g, c.b, c.a);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -82,17 +82,14 @@ private:
   }
 
   void loadResources()  {
-    Log   &log  = Log::instance();
-    auto  p     = loadGLPreset(std::string("preset.json"));
+    Log &log = Log::instance();
 
-    if (p.first)
+    if (this->glpreset.loadFromFile(std::string("preset.json")))
       log.print(LOG_INFO, std::string("OpenGL preset loading succeed."));
     else {
       log.print(LOG_CRIT, std::string("OpenGL preset loading failed."));
       std::exit(EXIT_FAILURE);
     }
-
-    this->glpreset = p.second;
   }
 };
 

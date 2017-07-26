@@ -1,13 +1,100 @@
-#include <json/json.h>
-
 #include "graphics.h"
 #include "file.h"
+#include "log.h"
 
-void _parseScreen(const Json::Value &root, GLPreset &preset);
-void _parsePrograms(const Json::Value &root, GLPreset &preset);
-GLuint _buildProgram(const Json::Value &program);
+GLenum getShaderType(const std::string &stype) {
+  std::pair<std::string, GLenum> list[] = {
+    std::make_pair(std::string("GL_VERTEX_SHADER"),   GLenum(GL_VERTEX_SHADER)),
+    std::make_pair(std::string("GL_FRAGMENT_SHADER"), GLenum(GL_FRAGMENT_SHADER)),
+    std::make_pair(std::string("GL_GEOMETRY_SHADER"), GLenum(GL_GEOMETRY_SHADER)),
+  };
 
-void _parseScreen(const Json::Value &root, GLPreset &preset) {
+  for (auto item : list)
+    if (item.first == stype)
+      return item.second;
+
+  return 0;
+}
+
+GLResource loadShader(const Json::Value &shader) {
+  GLResource  ress;
+
+  if (!shader.isObject())
+    return ress;
+
+  std::string type = shader["type"].asString(),
+              file = shader["file"].asString();
+
+  File fDesc;
+
+  if (!fDesc.load(file))
+    return ress;
+
+  ress.alloc(glCreateShader(getShaderType(type)),
+    [](GLuint *id) {
+      glDeleteShader(*id);
+      delete id;
+    }
+  );
+
+  if (!ress)
+    return ress;
+
+  const GLchar  *raw  = fDesc.getPtr<const GLchar>();
+  GLint         size  = static_cast<GLint>(fDesc.getSize()),
+                param = 0;
+
+  glShaderSource(ress.id(), 1, &raw, &size);
+  glCompileShader(ress.id());
+  glGetShaderiv(ress.id(), GL_COMPILE_STATUS, &param);
+
+  Log &log = Log::instance();
+
+  if (param == GL_TRUE)
+    log.print(LOG_INFO, std::string("OpenGL shader compiling succeed - ") + file);
+  else {
+    std::unique_ptr<GLchar[]> buff;
+
+    glGetShaderiv(ress.id(), GL_INFO_LOG_LENGTH, &param);
+    buff.reset(new GLchar[param + 1]);
+    std::memset(buff.get(), 0, param + 1);
+    glGetShaderInfoLog(ress.id(), param + 1, nullptr, buff.get());
+
+    log.print(LOG_WARN,
+      std::string("OpenGL shader compiling failed - ")
+    + file
+    + (param > 1 ? std::string("\n") + std::string(reinterpret_cast<char *>(buff.get())) : std::string()));
+  }
+
+  return ress;
+}
+
+bool GLPreset::loadFromString(const std::string &preset) {
+  Json::Value root;
+
+  if (!Json::Reader().parse(preset, root))
+    return false;
+
+  this->parseScreen(root);
+  this->parsePrograms(root);
+
+  return true;
+}
+
+bool GLPreset::loadFromFile(const std::string &filepath) {
+  File fDesc;
+
+  if (!fDesc.load(filepath))
+    return false;
+
+  return this->loadFromString(std::string(fDesc.getPtr<char>()));
+}
+
+glm::vec4 GLPreset::getColor() const {
+  return this->color;
+}
+
+void GLPreset::parseScreen(const Json::Value &root) {
   Json::Value screen = root["screen"];
 
   if (!screen.isObject())
@@ -16,11 +103,11 @@ void _parseScreen(const Json::Value &root, GLPreset &preset) {
   Json::Value color = screen["color"];
 
   if (color.isArray()) {
-    preset.color = glm::vec4(color[0].asFloat(), color[1].asFloat(), color[2].asFloat(), color[3].asFloat());
+    this->color = glm::vec4(color[0].asFloat(), color[1].asFloat(), color[2].asFloat(), color[3].asFloat());
   }
 }
 
-void _parsePrograms(const Json::Value &root, GLPreset &preset) {
+void GLPreset::parsePrograms(const Json::Value &root) {
   Json::Value programs = root["programs"];
 
   if (!programs.isArray())
@@ -31,46 +118,91 @@ void _parsePrograms(const Json::Value &root, GLPreset &preset) {
   for (Json::ArrayIndex i = 0; i < count; ++i) {
     Json::Value program = programs[i];
     std::string name    = program["name"].asString();
-    GLuint      id      = _buildProgram(program);
+    GLResource  resp    = this->buildProgram(program);
 
-    if (id == 0)
+    if (!resp)
       continue;
 
-    preset.programs[name] = id;
+    this->programs[name] = resp;
   }
 }
 
-GLuint _buildProgram(const Json::Value &program) {
-  GLuint      id      = glCreateProgram();
+GLResource GLPreset::buildProgram(const Json::Value &program) {
+  GLResource  resp;
+
+  if (!program.isObject())
+    return resp;
+
   Json::Value shaders = program["shaders"];
 
-  if (id == 0 || !shaders.isArray())
-    return 0;
+  if (!shaders.isArray())
+    return resp;
 
-  Json::ArrayIndex count = shaders.size();
+  resp.alloc(glCreateProgram(), 
+    [](GLuint *id) {
+      glDeleteProgram(*id);
+      delete id;
+    }
+  );
+
+  if (!resp)
+    return resp;
+
+  Json::ArrayIndex        count = shaders.size();
+  std::vector<GLResource> slist;
 
   for (Json::ArrayIndex i = 0; i < count; ++i) {
-    Json::Value shader = shaders[i];
+    Json::Value shader  = shaders[i];
+    GLResource  ress    = loadShader(shader);
+
+    if (!ress)
+      continue;
+
+    slist.push_back(ress);
+    glAttachShader(resp.id(), ress.id());
   }
 
-  return id;
+  GLint param = 0;
+
+  glLinkProgram(resp.id());
+  glGetProgramiv(resp.id(), GL_LINK_STATUS, &param);
+
+  Log &log = Log::instance();
+
+  if (param == GL_TRUE)
+    log.print(LOG_INFO, std::string("OpenGL program building succeed - ") + program["name"].asString());
+  else {
+    std::unique_ptr<GLchar[]> buff;
+
+    glGetProgramiv(resp.id(), GL_INFO_LOG_LENGTH, &param);
+    buff.reset(new GLchar[param + 1]);
+    std::memset(buff.get(), 0, param + 1);
+    glGetProgramInfoLog(resp.id(), param + 1, nullptr, buff.get());
+
+    log.print(LOG_WARN,
+      std::string("OpenGL program building failed - ")
+    + program["name"].asString()
+    + (param > 1 ? std::string("\n") + std::string(reinterpret_cast<char *>(buff.get())) : std::string()));
+  }
+
+  for (auto ress : slist)
+    glDetachShader(resp.id(), ress.id());
+
+  return resp;
 }
 
-std::pair<bool, GLPreset> loadGLPreset(const std::string &filepath) {
-  GLPreset  preset;
-  auto      fDesc = loadFile(filepath);
+GLResource::GLResource()
+  : idPtr(new GLuint(0))
+{}
 
-  if (fDesc.size == 0)
-    return std::make_pair(false, preset);
+GLResource::operator bool() const {
+  return this->id() != 0;
+}
 
-  Json::Value   root;
-  char          *raw = reinterpret_cast<char *>(fDesc.buff.get());
+GLuint &GLResource::id() {
+  return *this->idPtr;
+}
 
-  if (!Json::Reader().parse(raw, raw + fDesc.size, root))
-    return std::make_pair(false, preset);
-
-  _parseScreen(root, preset);
-  _parsePrograms(root, preset);
-
-  return std::make_pair(true, preset);
+const GLuint &GLResource::id() const {
+  return *this->idPtr;
 }
