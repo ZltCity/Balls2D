@@ -1,3 +1,5 @@
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "graphics.h"
 #include "file.h"
 #include "log.h"
@@ -69,128 +71,6 @@ GLResource loadShader(const Json::Value &shader) {
   return ress;
 }
 
-bool GLPreset::loadFromString(const std::string &preset) {
-  Json::Value root;
-
-  if (!Json::Reader().parse(preset, root))
-    return false;
-
-  this->parseScreen(root);
-  this->parsePrograms(root);
-
-  return true;
-}
-
-bool GLPreset::loadFromFile(const std::string &filepath) {
-  File fDesc;
-
-  if (!fDesc.load(filepath))
-    return false;
-
-  return this->loadFromString(std::string(fDesc.getPtr<char>()));
-}
-
-glm::vec4 GLPreset::getColor() const {
-  return this->color;
-}
-
-void GLPreset::parseScreen(const Json::Value &root) {
-  Json::Value screen = root["screen"];
-
-  if (!screen.isObject())
-    return;
-
-  Json::Value color = screen["color"];
-
-  if (color.isArray()) {
-    this->color = glm::vec4(color[0].asFloat(), color[1].asFloat(), color[2].asFloat(), color[3].asFloat());
-  }
-}
-
-void GLPreset::parsePrograms(const Json::Value &root) {
-  Json::Value programs = root["programs"];
-
-  if (!programs.isArray())
-    return;
-
-  Json::ArrayIndex count = programs.size();
-
-  for (Json::ArrayIndex i = 0; i < count; ++i) {
-    Json::Value program = programs[i];
-    std::string name    = program["name"].asString();
-    GLResource  resp    = this->buildProgram(program);
-
-    if (!resp)
-      continue;
-
-    this->programs[name] = resp;
-  }
-}
-
-GLResource GLPreset::buildProgram(const Json::Value &program) {
-  GLResource  resp;
-
-  if (!program.isObject())
-    return resp;
-
-  Json::Value shaders = program["shaders"];
-
-  if (!shaders.isArray())
-    return resp;
-
-  resp.alloc(glCreateProgram(), 
-    [](GLuint *id) {
-      glDeleteProgram(*id);
-      delete id;
-    }
-  );
-
-  if (!resp)
-    return resp;
-
-  Json::ArrayIndex        count = shaders.size();
-  std::vector<GLResource> slist;
-
-  for (Json::ArrayIndex i = 0; i < count; ++i) {
-    Json::Value shader  = shaders[i];
-    GLResource  ress    = loadShader(shader);
-
-    if (!ress)
-      continue;
-
-    slist.push_back(ress);
-    glAttachShader(resp.id(), ress.id());
-  }
-
-  GLint param = 0;
-
-  glLinkProgram(resp.id());
-  glGetProgramiv(resp.id(), GL_LINK_STATUS, &param);
-
-  Log &log = Log::instance();
-
-  if (param == GL_TRUE)
-    log.print(LOG_INFO, std::string("OpenGL program building succeed - ") + program["name"].asString());
-  else {
-    std::unique_ptr<GLchar[]> buff;
-
-    glGetProgramiv(resp.id(), GL_INFO_LOG_LENGTH, &param);
-    buff.reset(new GLchar[param + 1]);
-    std::memset(buff.get(), 0, param + 1);
-    glGetProgramInfoLog(resp.id(), param + 1, nullptr, buff.get());
-
-    log.print(LOG_WARN,
-      std::string("OpenGL program building failed - ")
-    + program["name"].asString()
-    + (param > 1 ? std::string("\n") + std::string(reinterpret_cast<char *>(buff.get())) : std::string()));
-  }
-
-  for (auto ress : slist)
-    glDetachShader(resp.id(), ress.id());
-
-  return resp;
-}
-
 GLResource::GLResource()
   : idPtr(new GLuint(0))
 {}
@@ -205,4 +85,151 @@ GLuint &GLResource::id() {
 
 const GLuint &GLResource::id() const {
   return *this->idPtr;
+}
+
+GLPreset::GLPreset() {}
+
+bool GLPreset::loadFromString(const std::string &preset) {
+  Json::Value root;
+
+  if (!Json::Reader().parse(preset, root))
+    return false;
+
+  this->parseScreen(root);
+  this->parseProgram(root);
+
+  return true;
+}
+
+bool GLPreset::loadFromFile(const std::string &filepath) {
+  File fDesc;
+
+  if (!fDesc.load(filepath))
+    return false;
+
+  return this->loadFromString(std::string(fDesc.getPtr<char>()));
+}
+
+void GLPreset::setOrthoSize(const glm::vec2 &size) {
+  this->orthoSize       = size;
+  this->orthoProjection = this->projection();
+}
+
+void GLPreset::setScreenSize(const glm::vec2 &size) {
+  this->screenSize = size;
+}
+
+glm::vec4 GLPreset::getColor() const {
+  return this->backgroundColor;
+}
+
+glm::mat4 GLPreset::projection() const {
+  float halfWidth   = this->orthoSize.x * 0.5f,
+        halfHeight  = this->orthoSize.y * 0.5f;
+
+  return glm::ortho(-1.f * halfWidth, halfWidth, -1.f * halfHeight, halfHeight);
+}
+
+void GLPreset::use() const {
+  glm::mat4 pm = this->orthoProjection;
+
+  glClearColor(
+    this->backgroundColor.r,
+    this->backgroundColor.g,
+    this->backgroundColor.b,
+    this->backgroundColor.a); 
+
+  if (this->program) {
+    GLuint pId = this->program.id();
+
+    glUseProgram(pId);
+    glUniformMatrix4fv(glGetUniformLocation(pId, "projection"),
+      1, GL_FALSE, reinterpret_cast<GLfloat *>(&pm));
+    glUniform2fv(glGetUniformLocation(pId, "screenSize"),
+      1, reinterpret_cast<const GLfloat *>(&this->screenSize));
+    glUniform1f(glGetUniformLocation(pId, "pointSize"), this->screenSize.x / this->orthoSize.x);
+  }
+}
+
+void GLPreset::parseScreen(const Json::Value &root) {
+  Json::Value screen = root["screen"];
+
+  if (!screen.isObject())
+    return;
+
+  Json::Value color         = screen["backgroundColor"];
+
+  if (color.isArray())
+    this->backgroundColor = glm::vec4(color[0].asFloat(), color[1].asFloat(), color[2].asFloat(), color[3].asFloat());
+}
+
+void GLPreset::parseProgram(const Json::Value &root) {
+  Json::Value program = root["program"];
+
+  if (!program.isObject())
+    return;
+
+  Json::Value shaders = program["shaders"];
+
+  if (!shaders.isArray())
+    return;
+
+  this->program.alloc(glCreateProgram(), 
+    [](GLuint *id) {
+      glDeleteProgram(*id);
+      delete id;
+    }
+  );
+
+  if (!this->program)
+    return;
+
+  GLuint id = this->program.id();
+
+  Json::ArrayIndex        count = shaders.size();
+  std::vector<GLResource> slist;
+
+  for (Json::ArrayIndex i = 0; i < count; ++i) {
+    Json::Value shader  = shaders[i];
+    GLResource  ress    = loadShader(shader);
+
+    if (!ress)
+      continue;
+
+    slist.push_back(ress);
+    glAttachShader(id, ress.id());
+  }
+
+  GLint param = 0;
+
+  glLinkProgram(id);
+  glGetProgramiv(id, GL_LINK_STATUS, &param);
+
+  Log &log = Log::instance();
+
+  if (param == GL_TRUE)
+    log.print(LOG_INFO, std::string("OpenGL program building succeed - ") + program["name"].asString());
+  else {
+    std::unique_ptr<GLchar[]> buff;
+
+    glGetProgramiv(id, GL_INFO_LOG_LENGTH, &param);
+    buff.reset(new GLchar[param + 1]);
+    std::memset(buff.get(), 0, param + 1);
+    glGetProgramInfoLog(id, param + 1, nullptr, buff.get());
+
+    log.print(LOG_WARN,
+      std::string("OpenGL program building failed - ")
+    + program["name"].asString()
+    + (param > 1 ? std::string("\n") + std::string(reinterpret_cast<char *>(buff.get())) : std::string()));
+  }
+
+  for (auto ress : slist)
+    glDetachShader(id, ress.id());
+}
+
+void bindVertexBuffer(const GLResource &res) {
+  if (!res)
+    return;
+
+  glBindBuffer(GL_ARRAY_BUFFER, res.id());
 }

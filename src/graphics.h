@@ -8,26 +8,6 @@
 
 #include "gl_core_4_5.h"
 
-class GLPreset {
-public:
-  typedef std::map<std::string, class GLResource> ResourceList;
-
-  GLPreset() = default;
-
-  bool loadFromString(const std::string &preset);
-  bool loadFromFile(const std::string &filepath);
-
-  glm::vec4 getColor() const;
-
-private:
-  glm::vec4 color;
-  ResourceList programs;
-
-  void parseScreen(const Json::Value &root);
-  void parsePrograms(const Json::Value &root);
-  GLResource buildProgram(const Json::Value &program);
-};
-
 class GLResource {
 public:
   typedef std::shared_ptr<GLuint> ptrType;
@@ -47,3 +27,59 @@ public:
 private:
   ptrType idPtr;
 };
+
+class GLPreset {
+public:
+  GLPreset();
+
+  bool loadFromString(const std::string &preset);
+  bool loadFromFile(const std::string &filepath);
+
+  void setOrthoSize(const glm::vec2 &size);
+  void setScreenSize(const glm::vec2 &size);
+
+  glm::vec4 getColor() const;
+  glm::mat4 projection() const;
+
+  void use() const;
+
+private:
+  glm::vec4 backgroundColor;
+  glm::vec2 orthoSize, screenSize;
+  glm::mat4 orthoProjection;
+  GLResource program;
+
+  void parseScreen(const Json::Value &root);
+  void parseProgram(const Json::Value &root);
+};
+
+template<typename TVertex>
+GLResource createVertexBuffer(size_t count, const TVertex *data, GLenum usage) {
+  GLuint      id = 0;
+  GLResource  resb;
+
+  glGenBuffers(1, &id);
+  resb.alloc(id,
+    [](GLuint *id) {
+      glDeleteBuffers(1, id);
+      delete id;
+    }
+  );
+
+  glBindBuffer(GL_ARRAY_BUFFER, id);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  writeVertexBuffer(resb, count, data, usage);
+
+  return resb;
+}
+
+template<typename TVertex>
+void writeVertexBuffer(GLResource &res, size_t count, const TVertex *data, GLenum usage) {
+  if (!res || count == 0)
+    return;
+
+  glNamedBufferData(res.id(), sizeof(TVertex) * count, data, usage);
+}
+
+void bindVertexBuffer(const GLResource &res);

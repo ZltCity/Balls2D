@@ -18,9 +18,9 @@ public:
 
   size_t getSize() const;
 
-  template<typename T_PTR>
-  T_PTR *getPtr() {
-    return reinterpret_cast<T_PTR *>(this->getPtr());
+  template<typename TPtr>
+  TPtr *getPtr() {
+    return reinterpret_cast<TPtr *>(this->getPtr());
   }
 
 private:

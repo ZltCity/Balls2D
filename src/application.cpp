@@ -16,7 +16,7 @@ public:
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,  SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,  /*SDL_GL_CONTEXT_PROFILE_CORE*/SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 
     log.print(LOG_INFO, std::string("SDL init succeed."));
   }
@@ -58,4 +58,12 @@ int Application::start(int argc, char **argv)
   }
 
   return this->onQuit();
+}
+
+glm::uvec2 Application::mousePosition() const {
+  int x, y;
+
+  SDL_GetMouseState(&x, &y);
+
+  return glm::uvec2(x, y);
 }
