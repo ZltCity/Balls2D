@@ -37,6 +37,11 @@ public:
   void onPreFrame()   {}
   void onPostFrame()  {}
   void onFrame() {
+    glm::mat4 inverted  = glm::inverse(this->orthoProjection);
+    glm::vec4 cursor    = inverted * glm::vec4(
+      mousePosition.x / SCREEN_WIDTH * 2.0f - 1.0f, 
+      mousePosition.y / SCREEN_HEIGHT * 2.0f - 1.0f, 0.0f, 1.0f);
+
     for (Particle &particle : this->physics.getParticles()) {
       particle.applyForce(glm::vec2(0.0f, -1.0f));
 
@@ -44,14 +49,12 @@ public:
         continue;
 
       //
-      glm::vec4   transformed = this->orthoProjection * glm::vec4(particle.getPosition(), 0.0f, 1.0f);
-      glm::vec2   windowed    = glm::vec2((transformed.x + 1.0f) * SCREEN_WIDTH * 0.5f, (transformed.y + 1.0f) * SCREEN_HEIGHT * 0.5f),
-                  dist        = glm::vec2(mousePosition) - windowed;
+      glm::vec2 dist = glm::vec2(cursor) - particle.getPosition();
 
-      if (glm::length(dist) > 100.0f)
+      if (glm::length(dist) > 10.0f)
         continue;
 
-      particle.applyForce(glm::normalize(dist) * (1.0f - dist / 100.0f) * 50.0f);
+      particle.applyForce(glm::normalize(dist) * 50.0f);
     }
 
     for (int i = 0; i < 2; ++i)
@@ -107,6 +110,8 @@ private:
   //std::vector<glm::ivec2> ps;
 
   void init() {
+    flags.lBtnPressed = false;
+    //
     this->createWidnow();
     this->createGLContext();
     this->loadResources();
