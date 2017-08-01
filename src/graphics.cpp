@@ -124,10 +124,7 @@ glm::vec4 GLPreset::getColor() const {
 }
 
 glm::mat4 GLPreset::projection() const {
-  float halfWidth   = this->orthoSize.x * 0.5f,
-        halfHeight  = this->orthoSize.y * 0.5f;
-
-  return glm::ortho(-1.f * halfWidth, halfWidth, -1.f * halfHeight, halfHeight);
+  return glm::ortho(0.0f, this->orthoSize.x, 0.0f, this->orthoSize.y);
 }
 
 void GLPreset::use() const {

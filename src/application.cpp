@@ -29,6 +29,8 @@ public:
 
 static __InitHelper __initHelper;
 
+int castFromSdlButton(int sdlButton);
+
 Application::Application()
 {}
 
@@ -51,6 +53,19 @@ int Application::start(int argc, char **argv)
           quit = true;
           break;
         }
+        case SDL_MOUSEMOTION: {
+          this->onMouseMove(glm::vec2(event.motion.x, event.motion.y));
+          this->onMouseMove(glm::vec2(event.motion.xrel, event.motion.yrel), true);
+          break;
+        }
+        case SDL_MOUSEBUTTONDOWN: {
+          this->onButtonPressed(castFromSdlButton(event.button.button), glm::vec2(event.button.x, event.button.y));
+          break;
+        }
+        case SDL_MOUSEBUTTONUP: {
+          this->onButtonReleased(castFromSdlButton(event.button.button), glm::vec2(event.button.x, event.button.y));
+          break;
+        }
       }
 
     this->onFrame();
@@ -60,10 +75,17 @@ int Application::start(int argc, char **argv)
   return this->onQuit();
 }
 
-glm::uvec2 Application::mousePosition() const {
-  int x, y;
+void Application::onMouseMove(const glm::vec2 &pos, bool relative) {}
 
-  SDL_GetMouseState(&x, &y);
+void Application::onButtonPressed(int button, const glm::vec2 &pos) {}
+void Application::onButtonReleased(int button, const glm::vec2 &pos) {}
 
-  return glm::uvec2(x, y);
+int castFromSdlButton(int sdlButton) {
+  switch (sdlButton) {
+    case SDL_BUTTON_LEFT    : return Application::MOUSE_BUTTON_LEFT;
+    case SDL_BUTTON_MIDDLE  : return Application::MOUSE_BUTTON_MIDDLE;
+    case SDL_BUTTON_RIGHT   : return Application::MOUSE_BUTTON_RIGHT;
+    case SDL_BUTTON_X1      : return Application::MOUSE_BUTTON_X1;
+    case SDL_BUTTON_X2      : return Application::MOUSE_BUTTON_X2;
+  }
 }

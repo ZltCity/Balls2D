@@ -15,16 +15,16 @@ const int     SCREEN_WIDTH      = 950,
               SCREEN_HEIGHT     = 950,
               SCREEN_X          = 50,
               SCREEN_Y          = 50,
+              GRID_WIDTH        = 100,
+              GRID_HEIGHT       = 100,
               PARTICLES_COUNT   = 5000;
 
-const float   GRID_WIDTH        = 100.f,
-              GRID_HEIGHT       = 100.f,
-              G_CONST           = static_cast<float>(0.1f/*6.67e-11*/);
+const float   G_CONST           = static_cast<float>(0.1f/*6.67e-11*/);
 
 class MyApplication : public Application {
 public:
   MyApplication()
-    : physics(PARTICLES_COUNT, glm::vec2(GRID_WIDTH, GRID_HEIGHT)) {
+    : physics(PARTICLES_COUNT, glm::uvec2(GRID_WIDTH, GRID_HEIGHT), 0.005f) {
   }
 
   void onStart() {
@@ -37,25 +37,27 @@ public:
   void onPreFrame()   {}
   void onPostFrame()  {}
   void onFrame() {
-    glm::uvec2 mousePosition = this->mousePosition(); 
-
-    mousePosition.y = SCREEN_HEIGHT - mousePosition.y;
-
-    for (Particle &particle : this->physics.particles()) {
+    for (Particle &particle : this->physics.getParticles()) {
       particle.applyForce(glm::vec2(0.0f, -1.0f));
+
+      if (!this->flags.lBtnPressed)
+        continue;
+
       //
-      glm::vec4   transformed = this->orthoProjection * glm::vec4(particle.position(), 0.0f, 1.0f);
+      glm::vec4   transformed = this->orthoProjection * glm::vec4(particle.getPosition(), 0.0f, 1.0f);
       glm::vec2   windowed    = glm::vec2((transformed.x + 1.0f) * SCREEN_WIDTH * 0.5f, (transformed.y + 1.0f) * SCREEN_HEIGHT * 0.5f),
                   dist        = glm::vec2(mousePosition) - windowed;
 
-      if (glm::length(dist) > 80)
+      if (glm::length(dist) > 100.0f)
         continue;
 
-      particle.applyForce(dist * 2.0f);
+      particle.applyForce(glm::normalize(dist) * (1.0f - dist / 100.0f) * 50.0f);
     }
 
-    this->physics.update(.02f);
-    writeVertexBuffer(this->glvertices, PARTICLES_COUNT, this->physics.particles().data(), GL_DYNAMIC_DRAW);
+    for (int i = 0; i < 2; ++i)
+      this->physics.update();
+
+    writeVertexBuffer(this->glvertices, PARTICLES_COUNT, this->physics.getParticles().data(), GL_DYNAMIC_DRAW);
     //
     while (glGetError() != GL_NO_ERROR) {}
 
@@ -73,6 +75,21 @@ public:
     this->mainWnd.present();
   }
 
+  void onMouseMove(const glm::vec2 &pos, bool relative) {
+    if (!relative) {
+      this->mousePosition.x = pos.x;
+      this->mousePosition.y = SCREEN_HEIGHT - pos.y;
+    }
+  }
+
+  void onButtonPressed(int button, const glm::vec2 &pos) {
+    this->flags.lBtnPressed = true;
+  }
+
+  void onButtonReleased(int button, const glm::vec2 &pos) {
+    this->flags.lBtnPressed = false;
+  }
+
 private:
   Window      mainWnd;
   GLContext   glContext;
@@ -81,6 +98,11 @@ private:
   Physics     physics;
 
   glm::mat4   orthoProjection;
+  glm::vec2   mousePosition;
+
+  struct {
+    bool lBtnPressed;
+  } flags;
 
   //std::vector<glm::ivec2> ps;
 
@@ -89,12 +111,9 @@ private:
     this->createGLContext();
     this->loadResources();
     //
-    float halfWidth  = GRID_WIDTH  * 0.5f,
-          halfHeight = GRID_HEIGHT * 0.5f;
-
     std::random_device                rdev;
-    std::uniform_real_distribution<>  dx(-1.0f * halfWidth, halfWidth),
-                                      dy(-1.0f * halfHeight, halfHeight);
+    std::uniform_real_distribution<>  dx(5.0f, static_cast<float>(GRID_WIDTH) - 5.0f),
+                                      dy(5.0f, static_cast<float>(GRID_HEIGHT) - 5.0f);
 
     this->physics.init(
       [&](size_t) {
@@ -140,7 +159,7 @@ private:
       std::exit(EXIT_FAILURE);
     }
 
-    this->glpreset.setOrthoSize(glm::vec2(GRID_WIDTH, GRID_HEIGHT) * 1.1f);
+    this->glpreset.setOrthoSize(glm::vec2(GRID_WIDTH, GRID_HEIGHT));
     this->glpreset.setScreenSize(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT));
 
     this->orthoProjection = this->glpreset.projection();

@@ -3,63 +3,83 @@
 #include <cstdint>
 
 #include <vector>
+#include <memory>
 #include <unordered_map>
 #include <glm/glm.hpp>
+
+const int DEFAULT_CELL_CAPACITY = 32;
 
 class Particle {
 public:
   Particle() = default;
   Particle(const glm::vec2 &pos);
 
-  glm::vec2 &position();
-  const glm::vec2 &position() const;
-
-  float mass() const;
-
-  void applyForce(const glm::vec2 force);
-  void move(float dt);
-
   void setPosition(const glm::vec2 &pos);
+
+  glm::vec2 &getPosition();
+  const glm::vec2 &getPosition() const;
+
+  glm::vec2 &getForses();
+  const glm::vec2 &getForses() const;
+
+  float getMass() const;
+
+  void applyForce(const glm::vec2 &force);
+  void move(float dt);
 
   bool intersect(const Particle &particle, glm::vec2 &outDist, float &outDiff);
 
 private:
   glm::vec2 pos, prev,
             forces;
-  float     m;
+  float     mass;
 
-  glm::vec2 acceleration() const;
+  glm::vec2 calcAcceleration() const;
 };
 
-class Grid {
+class GridCell {
 public:
-  struct Cell {
-    std::vector<Particle *> particles;
-  };
+  GridCell();
 
-  Grid(const glm::vec2 &size);
+  size_t getCount() const;
+  
+  Particle *getParticlePtr(size_t index);
+  const Particle *getParticlePtr(size_t index) const;
 
   void push(Particle *particle);
   void clear();
 
-  glm::vec2 size() const;
+private:
+  size_t     count;
+  Particle  *particles[DEFAULT_CELL_CAPACITY];
+};
 
-  Cell &cell(const glm::uvec2 coord);
-  const Cell &cell(const glm::uvec2 coord) const;
+class Grid {
+public:
+  Grid(const glm::uvec2 &size);
 
-  static uint64_t getCellKey(const Particle &particle);
-  static uint64_t getCellKey(const glm::uvec2 &coord);
-  static glm::uvec2 getCellCoord(const Particle &particle);
+  operator bool() const;
+
+  GridCell &operator[](const glm::ivec2 &coord);
+  const GridCell &operator[](const glm::ivec2 &coord) const;
+
+  void push(Particle *particle);
+  void clear();
+
+  glm::uvec2 getSize() const;
+  size_t getCount() const;
 
 private:
-  std::unordered_map
-    <uint64_t, Cell>  grid;
-  glm::vec2           gridSize;
+  std::shared_ptr
+    <GridCell>  cells;
+  glm::uvec2    size;
+
+  void alloc(const glm::uvec2 &size);
 };
 
 class Physics {
 public:
-  Physics(size_t count, const glm::vec2 &size);
+  Physics(size_t count, const glm::vec2 &size, float dt);
 
   template<typename TGenerator>
   void init(TGenerator &&gen) {
@@ -67,10 +87,10 @@ public:
       this->plist.push_back(gen(i));
   }
 
-  void update(float dt);
+  void update();
 
-  std::vector<Particle> &particles();
-  const std::vector<Particle> &particles() const;
+  std::vector<Particle> &getParticles();
+  const std::vector<Particle> &getParticles() const;
 
 private:
   size_t  count;
@@ -81,5 +101,5 @@ private:
   Grid          grid;
 
   void solve();
-  void solveBounds(Particle &particle);
+  void correctToBounds(Particle &particle);
 };
