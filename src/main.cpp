@@ -8,6 +8,7 @@
 #include "window.h"
 #include "file.h"
 #include "log.h"
+#include "threadpool.h"
 
 #include "physics.h"
 
@@ -15,16 +16,17 @@ const int     SCREEN_WIDTH      = 950,
               SCREEN_HEIGHT     = 950,
               SCREEN_X          = 50,
               SCREEN_Y          = 50,
-              GRID_WIDTH        = 100,
-              GRID_HEIGHT       = 100,
-              PARTICLES_COUNT   = 5000;
+              GRID_WIDTH        = 200,
+              GRID_HEIGHT       = 200,
+              PARTICLES_COUNT   = 20000,
+              THREADS_COUNT     = 4;
 
 const float   G_CONST           = static_cast<float>(0.1f/*6.67e-11*/);
 
 class MyApplication : public Application {
 public:
   MyApplication()
-    : physics(PARTICLES_COUNT, glm::uvec2(GRID_WIDTH, GRID_HEIGHT), 0.005f) {
+    : physics(PARTICLES_COUNT, glm::uvec2(GRID_WIDTH, GRID_HEIGHT), 0.01f), threadPool(THREADS_COUNT) {
   }
 
   void onStart() {
@@ -45,19 +47,24 @@ public:
     for (Particle &particle : this->physics.getParticles()) {
       particle.applyForce(glm::vec2(0.0f, -1.0f));
 
-      if (!this->flags.lBtnPressed)
+      if (!this->flags.lBtnPressed && !this->flags.rBtnPressed)
         continue;
 
       //
-      glm::vec2 dist = glm::vec2(cursor) - particle.getPosition();
+      glm::vec2 dist    = glm::vec2(cursor) - particle.getPosition();
+      float     length  = glm::length(dist),
+                strengh = (1.0f - length / 30.0f) * 10.0f;
 
-      if (glm::length(dist) > 10.0f)
+      if (glm::length(dist) > 30.0f)
         continue;
 
-      particle.applyForce(glm::normalize(dist) * 50.0f);
+      if (this->flags.rBtnPressed)
+        strengh *= -1.0f;
+
+      particle.applyForce(glm::normalize(dist) * strengh);
     }
 
-    for (int i = 0; i < 2; ++i)
+    for (int i = 0; i < 1; ++i)
       this->physics.update();
 
     writeVertexBuffer(this->glvertices, PARTICLES_COUNT, this->physics.getParticles().data(), GL_DYNAMIC_DRAW);
@@ -68,7 +75,9 @@ public:
     bindVertexBuffer(this->glvertices);
 
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Particle), nullptr);
+    glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(Particle), reinterpret_cast<char *>(0) + sizeof(glm::vec2) * 3 + sizeof(float));
     glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(4);
 
     glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
     
@@ -86,11 +95,29 @@ public:
   }
 
   void onButtonPressed(int button, const glm::vec2 &pos) {
-    this->flags.lBtnPressed = true;
+    switch (button) {
+      case MOUSE_BUTTON_LEFT: {
+        this->flags.lBtnPressed = true;
+        break;
+      }
+      case MOUSE_BUTTON_RIGHT: {
+        this->flags.rBtnPressed = true;
+        break;
+      }
+    }
   }
 
   void onButtonReleased(int button, const glm::vec2 &pos) {
-    this->flags.lBtnPressed = false;
+    switch (button) {
+      case MOUSE_BUTTON_LEFT: {
+        this->flags.lBtnPressed = false;
+        break;
+      }
+      case MOUSE_BUTTON_RIGHT: {
+        this->flags.rBtnPressed = false;
+        break;
+      }
+    }
   }
 
 private:
@@ -99,17 +126,19 @@ private:
   GLPreset    glpreset;
   GLResource  glvertices;
   Physics     physics;
+  ThreadPool  threadPool;
 
   glm::mat4   orthoProjection;
   glm::vec2   mousePosition;
 
   struct {
-    bool lBtnPressed;
+    bool lBtnPressed, rBtnPressed;
   } flags;
 
   //std::vector<glm::ivec2> ps;
 
   void init() {
+    flags.lBtnPressed = false;
     flags.lBtnPressed = false;
     //
     this->createWidnow();

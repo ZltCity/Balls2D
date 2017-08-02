@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <glm/glm.hpp>
 
-const int DEFAULT_CELL_CAPACITY = 32;
+const int DEFAULT_CELL_CAPACITY = 16;
 
 class Particle {
 public:
@@ -27,12 +27,13 @@ public:
   void applyForce(const glm::vec2 &force);
   void move(float dt);
 
-  bool intersect(const Particle &particle, glm::vec2 &outDist, float &outDiff);
+  bool intersect(Particle &particle, glm::vec2 &outDist, float &outDiff);
+
+  void zeroDiffSum();
 
 private:
-  glm::vec2 pos, prev,
-            forces;
-  float     mass;
+  glm::vec2 pos, prev, forces;
+  float     mass, diffSum;
 
   glm::vec2 calcAcceleration() const;
 };

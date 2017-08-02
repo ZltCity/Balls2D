@@ -3,7 +3,7 @@
 #include "physics.h"
 
 Particle::Particle(const glm::vec2 &pos)
-  : pos(pos), prev(pos), mass(1.0f) {
+  : pos(pos), prev(pos), mass(1.0f), diffSum(0.0f) {
 }
 
 void Particle::setPosition(const glm::vec2 &pos) {
@@ -32,19 +32,20 @@ float Particle::getMass() const {
 
 void Particle::applyForce(const glm::vec2 &force) {
   this->forces += force;
-  this->forces *= 0.9f;
 }
 
 void Particle::move(float dt) {
   glm::vec2 delta = this->pos - this->prev;
 
+  this->forces *= 0.85f;
+
   this->prev   = this->pos;
-  this->pos   += delta/* * dt*/ + this->calcAcceleration() * dt * dt;
+  this->pos   += delta * 0.998f/* * dt*/ + this->calcAcceleration() * dt * dt;
 }
 
-bool Particle::intersect(const Particle &particle, glm::vec2 &outDist, float &outDiff) {
+bool Particle::intersect(Particle &particle, glm::vec2 &outDist, float &outDiff) {
   glm::vec2 dist = this->pos - particle.getPosition();
-  float     diff = 1.0f - glm::length(dist);
+  float     diff = 1.0f - (dist.x * dist.x + dist.y * dist.y);
 
   if (diff < 0.0f)
     return false;
@@ -52,7 +53,14 @@ bool Particle::intersect(const Particle &particle, glm::vec2 &outDist, float &ou
   outDist = dist;
   outDiff = diff;
 
+  this->diffSum     += diff;
+  particle.diffSum  += diff;
+
   return true;
+}
+
+void Particle::zeroDiffSum() {
+  this->diffSum = 0.0f;
 }
 
 glm::vec2 Particle::calcAcceleration() const {
@@ -153,6 +161,7 @@ void Physics::update() {
   for (size_t i = 0; i < this->plist.size(); ++i) {
     Particle &particle = this->plist[i];
 
+    particle.zeroDiffSum();
     particle.move(this->dt);
     this->correctToBounds(particle);
     this->grid.push(&particle);
@@ -170,34 +179,46 @@ const std::vector<Particle> &Physics::getParticles() const {
 }
 
 void Physics::solve() {
-  for (size_t i = 0; i < this->plist.size(); ++i) {
-    Particle    &p0         = this->plist[i];
-    glm::uvec2  &gridSize   = this->grid.getSize();
-    glm::ivec2   gridCoord  = glm::uvec2(p0.getPosition());
+  auto solveCell = [](Particle &p0, GridCell &cell, size_t offset) {
+    for (size_t i = offset; i < cell.getCount(); ++i) {
+      Particle  &p1 = *cell.getParticlePtr(i);
 
-    for (int y = gridCoord.y - 1; y <= gridCoord.y + 1; ++y) {
-      if (y < 0 || y >= static_cast<int>(gridSize.y))
+      glm::vec2  dist;
+      float      diff = 0.0f;
+
+      if (!p0.intersect(p1, dist, diff))
         continue;
 
-      for (int x = gridCoord.x - 1; x <= gridCoord.x + 1; ++x) {
-        if (x < 0 || x >= static_cast<int>(gridSize.x))
-          continue;
+      glm::normalize(dist);
 
-        GridCell &cell = this->grid[glm::uvec2(x, y)];
+      dist *= diff * 0.27f;
+      p0.setPosition(p0.getPosition() + dist);
+      p1.setPosition(p1.getPosition() - dist);
+    }
+  };
+  //
+  glm::uvec2 &gridSize = this->grid.getSize();
 
-        for (size_t pi = 0; pi < cell.getCount(); ++pi) {
-          Particle  &p1 = *cell.getParticlePtr(pi);
-          glm::vec2  dist;
-          float      diff = 0.f;
+  for (size_t ci = 0; ci < this->grid.getCount(); ++ci) {
+    int        cx = static_cast<int>(ci) % gridSize.x, cy = static_cast<int>(ci) / gridSize.x;
+    GridCell  &c0 = this->grid[glm::uvec2(cx, cy)];
 
-          if (!p0.intersect(p1, dist, diff)/* || glm::length(dist) == 0.0f*/)
+    //  Проверка с самой собой(ячейкой).
+    solveCell(*c0.getParticlePtr(0), c0, 1);
+
+    for (size_t pi = 0; pi < c0.getCount(); ++pi) {
+      Particle &p0 = *c0.getParticlePtr(pi);
+
+      for (int y = cy; y <= cy + 1; ++y) {
+        for (int x = cx - 1; x <= cx + 1; ++x) {
+          if (
+             (y == cy && x < cx + 1)
+          || (x == cx && y == cy)
+          || x < 0 || x > static_cast<int>(gridSize.x) - 1
+          || y < 0 || y > static_cast<int>(gridSize.y) - 1)
             continue;
 
-          glm::normalize(dist);
-
-          dist *= diff * 0.5f;
-          p0.setPosition(p0.getPosition() + dist);
-          p1.setPosition(p1.getPosition() - dist);
+          solveCell(p0, this->grid[glm::uvec2(x, y)], 0);
         }
       }
     }
