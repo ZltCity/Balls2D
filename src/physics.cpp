@@ -45,7 +45,7 @@ void Particle::move(float dt) {
 
 bool Particle::intersect(Particle &particle, glm::vec2 &outDist, float &outDiff) {
   glm::vec2 dist = this->pos - particle.getPosition();
-  float     diff = 1.0f - (dist.x * dist.x + dist.y * dist.y);
+  float     diff = 1.0f - glm::length(dist);
 
   if (diff < 0.0f)
     return false;
@@ -82,7 +82,10 @@ Particle *GridCell::getParticlePtr(size_t index) {
 }
 
 const Particle *GridCell::getParticlePtr(size_t index) const {
-  return this->getParticlePtr(index);
+  if (index >= DEFAULT_CELL_CAPACITY)
+    return nullptr;
+
+  return this->particles[index];
 }
 
 void GridCell::push(Particle *particle) {
@@ -114,7 +117,11 @@ GridCell &Grid::operator[](const glm::ivec2 &coord) {
 }
 
 const GridCell &Grid::operator[](const glm::ivec2 &coord) const {
-  return this->operator[](coord);
+  if (coord.x < 0 || coord.x >= static_cast<int>(this->size.x)
+   || coord.y < 0 || coord.y >= static_cast<int>(this->size.y))
+    throw std::out_of_range(std::string("Invalid grid coordinates."));
+
+  return this->cells.get()[coord.x + coord.y * this->size.x];
 }
 
 void Grid::push(Particle *particle) {
@@ -166,19 +173,9 @@ void Physics::update() {
     this->correctToBounds(particle);
     this->grid.push(&particle);
   }
-
-  this->solve();
 }
 
-std::vector<Particle> &Physics::getParticles() {
-  return this->plist;
-}
-
-const std::vector<Particle> &Physics::getParticles() const {
-  return this->plist;
-}
-
-void Physics::solve() {
+void Physics::solve(const glm::ivec2 &offset, const glm::ivec2 size) {
   auto solveCell = [](Particle &p0, GridCell &cell, size_t offset) {
     for (size_t i = offset; i < cell.getCount(); ++i) {
       Particle  &p1 = *cell.getParticlePtr(i);
@@ -191,7 +188,7 @@ void Physics::solve() {
 
       glm::normalize(dist);
 
-      dist *= diff * 0.27f;
+      dist *= diff * 0.5f;
       p0.setPosition(p0.getPosition() + dist);
       p1.setPosition(p1.getPosition() - dist);
     }
@@ -199,30 +196,42 @@ void Physics::solve() {
   //
   glm::uvec2 &gridSize = this->grid.getSize();
 
-  for (size_t ci = 0; ci < this->grid.getCount(); ++ci) {
-    int        cx = static_cast<int>(ci) % gridSize.x, cy = static_cast<int>(ci) / gridSize.x;
-    GridCell  &c0 = this->grid[glm::uvec2(cx, cy)];
+  for (int cy = offset.y; cy < offset.y + size.y; ++cy)
+    for (int cx = offset.x; cx < offset.x + size.x; ++cx) {
+      GridCell  &c0 = this->grid[glm::uvec2(cx, cy)];
 
-    //  Проверка с самой собой(ячейкой).
-    solveCell(*c0.getParticlePtr(0), c0, 1);
+      //  Проверка с самой собой(ячейкой).
+      solveCell(*c0.getParticlePtr(0), c0, 1);
 
-    for (size_t pi = 0; pi < c0.getCount(); ++pi) {
-      Particle &p0 = *c0.getParticlePtr(pi);
+      for (size_t pi = 0; pi < c0.getCount(); ++pi) {
+        Particle &p0 = *c0.getParticlePtr(pi);
 
-      for (int y = cy; y <= cy + 1; ++y) {
-        for (int x = cx - 1; x <= cx + 1; ++x) {
-          if (
-             (y == cy && x < cx + 1)
-          || (x == cx && y == cy)
-          || x < 0 || x > static_cast<int>(gridSize.x) - 1
-          || y < 0 || y > static_cast<int>(gridSize.y) - 1)
-            continue;
+        for (int y = cy; y <= cy + 1; ++y) {
+          for (int x = cx - 1; x <= cx + 1; ++x) {
+            if (
+               (y == cy && x < cx + 1)
+            //|| (x == cx && y == cy)
+            || x < 0 || x > static_cast<int>(gridSize.x) - 1
+            || y < 0 || y > static_cast<int>(gridSize.y) - 1)
+              continue;
 
-          solveCell(p0, this->grid[glm::uvec2(x, y)], 0);
+            solveCell(p0, this->grid[glm::uvec2(x, y)], 0);
+          }
         }
       }
     }
-  }
+}
+
+std::vector<Particle> &Physics::getParticles() {
+  return this->plist;
+}
+
+const std::vector<Particle> &Physics::getParticles() const {
+  return this->plist;
+}
+
+glm::uvec2 Physics::getGridSize() const {
+  return this->grid.getSize();
 }
 
 void Physics::correctToBounds(Particle &particle) {

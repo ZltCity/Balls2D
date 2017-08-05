@@ -16,17 +16,17 @@ const int     SCREEN_WIDTH      = 950,
               SCREEN_HEIGHT     = 950,
               SCREEN_X          = 50,
               SCREEN_Y          = 50,
-              GRID_WIDTH        = 200,
-              GRID_HEIGHT       = 200,
-              PARTICLES_COUNT   = 20000,
-              THREADS_COUNT     = 4;
+              GRID_WIDTH        = 256,
+              GRID_HEIGHT       = 256,
+              PARTICLES_COUNT   = 30000,
+              THREADS_COUNT     = 8;
 
 const float   G_CONST           = static_cast<float>(0.1f/*6.67e-11*/);
 
 class MyApplication : public Application {
 public:
   MyApplication()
-    : physics(PARTICLES_COUNT, glm::uvec2(GRID_WIDTH, GRID_HEIGHT), 0.01f), threadPool(THREADS_COUNT) {
+    : physics(PARTICLES_COUNT, glm::uvec2(GRID_WIDTH, GRID_HEIGHT), 0.01f) {
   }
 
   void onStart() {
@@ -39,52 +39,80 @@ public:
   void onPreFrame()   {}
   void onPostFrame()  {}
   void onFrame() {
-    glm::mat4 inverted  = glm::inverse(this->orthoProjection);
-    glm::vec4 cursor    = inverted * glm::vec4(
-      mousePosition.x / SCREEN_WIDTH * 2.0f - 1.0f, 
-      mousePosition.y / SCREEN_HEIGHT * 2.0f - 1.0f, 0.0f, 1.0f);
+    bool done = true;
 
-    for (Particle &particle : this->physics.getParticles()) {
-      particle.applyForce(glm::vec2(0.0f, -1.0f));
+    for (size_t i = 0; i < THREADS_COUNT; ++i)
+      if (!this->taskDone[i]) {
+        done = false;
+        break;
+      }             
 
-      if (!this->flags.lBtnPressed && !this->flags.rBtnPressed)
-        continue;
+    if (done) {
+      glm::mat4 inverted  = glm::inverse(this->orthoProjection);
+      glm::vec4 cursor    = inverted * glm::vec4(
+        mousePosition.x / SCREEN_WIDTH * 2.0f - 1.0f, 
+        mousePosition.y / SCREEN_HEIGHT * 2.0f - 1.0f, 0.0f, 1.0f);
+
+      for (Particle &particle : this->physics.getParticles()) {
+        particle.applyForce(glm::vec2(0.0f, -1.0f));
+
+        if (!this->flags.lBtnPressed && !this->flags.rBtnPressed)
+          continue;
+
+        //
+        glm::vec2 dist    = glm::vec2(cursor) - particle.getPosition();
+        float     length  = glm::length(dist),
+                  strengh = (1.0f - length / 30.0f) * 10.0f;
+
+        if (glm::length(dist) > 30.0f)
+          continue;
+
+        if (this->flags.rBtnPressed)
+          strengh *= -1.0f;
+
+        particle.applyForce(glm::normalize(dist) * strengh);
+      }
+
+      writeVertexBuffer(this->glvertices, PARTICLES_COUNT, this->physics.getParticles().data(), GL_DYNAMIC_DRAW);
 
       //
-      glm::vec2 dist    = glm::vec2(cursor) - particle.getPosition();
-      float     length  = glm::length(dist),
-                strengh = (1.0f - length / 30.0f) * 10.0f;
+      while (glGetError() != GL_NO_ERROR) {}
 
-      if (glm::length(dist) > 30.0f)
-        continue;
+      this->glpreset.use();
+      bindVertexBuffer(this->glvertices);
 
-      if (this->flags.rBtnPressed)
-        strengh *= -1.0f;
+      glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Particle), nullptr);
+      glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(Particle), reinterpret_cast<char *>(0) + sizeof(glm::vec2) * 3 + sizeof(float));
+      glEnableVertexAttribArray(0);
+      glEnableVertexAttribArray(4);
 
-      particle.applyForce(glm::normalize(dist) * strengh);
-    }
-
-    for (int i = 0; i < 1; ++i)
-      this->physics.update();
-
-    writeVertexBuffer(this->glvertices, PARTICLES_COUNT, this->physics.getParticles().data(), GL_DYNAMIC_DRAW);
-    //
-    while (glGetError() != GL_NO_ERROR) {}
-
-    this->glpreset.use();
-    bindVertexBuffer(this->glvertices);
-
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Particle), nullptr);
-    glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(Particle), reinterpret_cast<char *>(0) + sizeof(glm::vec2) * 3 + sizeof(float));
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(4);
-
-    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+      glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
     
-    glClear(GL_COLOR_BUFFER_BIT);
-    glDrawArrays(GL_POINTS, 0, PARTICLES_COUNT);
+      glClear(GL_COLOR_BUFFER_BIT);
+      glDrawArrays(GL_POINTS, 0, PARTICLES_COUNT);
 
-    this->mainWnd.present();
+      this->mainWnd.present();
+      //
+      this->physics.update();
+      //
+      int step = GRID_WIDTH / THREADS_COUNT;
+
+      for (size_t t = 0; t < THREADS_COUNT; ++t) {
+        Arguments     args = {};
+        ThreadRoutine task = [this, t, step](Arguments &args) {
+          glm::uvec2  &gridSize   = physics.getGridSize();
+          glm::ivec2   offset     = glm::ivec2(t * step, 0),
+                       size       = glm::ivec2(step, gridSize.y);
+
+          physics.solve(offset, size);
+          taskDone[t] = true;
+          Log::instance().print(LOG_INFO, std::string("thread #") + std::to_string(t) + std::string(" done."));
+        };
+
+        this->taskDone[t] = false;
+        this->threadPool.pushTask(task, args);
+      }
+    }
   }
 
   void onMouseMove(const glm::vec2 &pos, bool relative) {
@@ -126,7 +154,9 @@ private:
   GLPreset    glpreset;
   GLResource  glvertices;
   Physics     physics;
-  ThreadPool  threadPool;
+  ThreadPool
+    <THREADS_COUNT> threadPool;
+  bool        taskDone[THREADS_COUNT];
 
   glm::mat4   orthoProjection;
   glm::vec2   mousePosition;
@@ -140,6 +170,9 @@ private:
   void init() {
     flags.lBtnPressed = false;
     flags.lBtnPressed = false;
+    //
+    for (size_t i = 0; i < THREADS_COUNT; ++i)
+      this->taskDone[i] = true;
     //
     this->createWidnow();
     this->createGLContext();

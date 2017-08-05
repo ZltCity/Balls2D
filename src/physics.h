@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <glm/glm.hpp>
 
-const int DEFAULT_CELL_CAPACITY = 16;
+const int DEFAULT_CELL_CAPACITY = 32;
 
 class Particle {
 public:
@@ -89,9 +89,12 @@ public:
   }
 
   void update();
+  void solve(const glm::ivec2 &offset, const glm::ivec2 size);
 
   std::vector<Particle> &getParticles();
   const std::vector<Particle> &getParticles() const;
+
+  glm::uvec2 getGridSize() const;
 
 private:
   size_t  count;
@@ -101,6 +104,5 @@ private:
     <Particle>  plist;
   Grid          grid;
 
-  void solve();
   void correctToBounds(Particle &particle);
 };
