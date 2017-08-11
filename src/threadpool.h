@@ -1,98 +1,68 @@
 #pragma once
 
-#include <thread>
-#include <mutex>
-#include <atomic>
+#include <condition_variable>
+#include <vector>
 #include <list>
-#include <functional>
-#include <initializer_list>
 
-typedef std::initializer_list<void *>     Arguments;
-typedef std::function<void (Arguments &)> ThreadRoutine;
+#include "atomic.h"
+#include "thread.h"
 
-struct ThreadTask {
-  ThreadRoutine routine;
-  Arguments     args;
-};
-
-struct ThreadContext {
-  size_t      index;
-  std::thread thread;
-  bool        quit;
-};
-
-template<size_t TCapacity>
-class ThreadPool {
+class Task {
 public:
-  ThreadPool() {
-    this->init();
-  }
-  ~ThreadPool() {
-    this->free();
-  }
+  Task() = default;
+  virtual ~Task() = 0;
 
-  void pushTask(ThreadRoutine routine, Arguments args) {
-    std::unique_lock
-      <std::mutex>  lock(this->taskListEntry);
-    ThreadTask      task = {
-      routine,
-      args
-    };
+  virtual void doTask() = 0;
 
-    this->taskList.push_back(task);
-    this->taskListCV.notify_one();
-  }
+  bool done() const;
 
-  size_t getCapacity() {
-    return TCapacity;
-  }
+  void setDone();
+  void resetDone();
 
 private:
-  std::mutex              taskListEntry;
-  std::condition_variable taskListCV;
-  std::list
-    <ThreadTask>          taskList;
-  ThreadContext           threads[TCapacity];
+  Task(const Task &) = delete;
+  Task &operator=(const Task &) = delete;
 
+  bool doneFlag;
+};
+
+typedef std::shared_ptr<Task> TaskPtr;
+
+class TaskList {
+public:
+  TaskList() = default;
+
+  void push(TaskPtr &taskPtr);
+  TaskPtr pop();
+
+  void wait();
+
+private:
+  TaskList(const TaskList &) = delete;
+  TaskList &operator=(const TaskList &) = delete;
+
+  std::list<TaskPtr> list;
+  AtomicLock entryLock;
+  std::condition_variable_any waitCond;
+};
+
+class ThreadPool {
+public:
+  ThreadPool(size_t count = 8);
+  ~ThreadPool();
+
+  void pushTask(TaskPtr &taskPtr);
+
+  size_t getCount() const;
+
+private:
   ThreadPool(const ThreadPool &) = delete;
   ThreadPool &operator=(const ThreadPool &) = delete;
 
-  void init() {
-    auto proxyRoutine = [&](ThreadContext *context) {
-      while (!context->quit) {
-        std::unique_lock
-          <std::mutex>  lock(taskListEntry);
-        
-        taskListCV.wait(lock);
-        //
-        ThreadTask  task;
-        bool        ready = false;        
+  std::vector<Thread> pool;
+  TaskList taskList;
+  bool quitFlag;
 
-        if (taskList.size() > 0) {
-          task = taskList.front();
-          taskList.pop_front();
-          ready = true;
-        }
-        lock.unlock();
-
-        if (ready)
-          task.routine(task.args);
-      }
-    };
-
-    for (size_t i = 0; i < TCapacity; ++i) {
-      threads[i].index  = i;
-      threads[i].quit   = false;
-      //
-      threads[i].thread = std::thread(proxyRoutine, &threads[i]);
-    }
-  }
-
-  void free() {
-    for (size_t i = 0; i < TCapacity; ++i) {
-      this->threads[i].quit = true;
-      this->taskListCV.notify_all();
-      this->threads[i].thread.join();
-    }
-  }
+  void alloc(size_t count);
+  void free();
 };

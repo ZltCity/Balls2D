@@ -16,17 +16,35 @@ const int     SCREEN_WIDTH      = 950,
               SCREEN_HEIGHT     = 950,
               SCREEN_X          = 50,
               SCREEN_Y          = 50,
-              GRID_WIDTH        = 256,
-              GRID_HEIGHT       = 256,
-              PARTICLES_COUNT   = 30000,
-              THREADS_COUNT     = 8;
+              GRID_WIDTH        = 128,
+              GRID_HEIGHT       = 128,
+              PARTICLES_COUNT   = 10000,
+              THREADS_COUNT     = 2;
 
 const float   G_CONST           = static_cast<float>(0.1f/*6.67e-11*/);
+
+class SolverTask : public Task {
+public:
+  SolverTask(Physics &physics, size_t index)
+    : physics(physics), index(index), step(GRID_WIDTH / THREADS_COUNT) {}
+
+  void doTask() {
+    glm::uvec2  &gridSize   = physics.getGridSize();
+    glm::ivec2   offset     = glm::ivec2(this->index * this->step, 0),
+                 size       = glm::ivec2(this->step, gridSize.y);
+
+    physics.solve(offset, size);
+  }
+
+private:
+  Physics &physics;
+  size_t index, step;
+};
 
 class MyApplication : public Application {
 public:
   MyApplication()
-    : physics(PARTICLES_COUNT, glm::uvec2(GRID_WIDTH, GRID_HEIGHT), 0.01f) {
+    : physics(PARTICLES_COUNT, glm::uvec2(GRID_WIDTH, GRID_HEIGHT), 0.01f), threadPool(THREADS_COUNT) {
   }
 
   void onStart() {
@@ -42,7 +60,7 @@ public:
     bool done = true;
 
     for (size_t i = 0; i < THREADS_COUNT; ++i)
-      if (!this->taskDone[i]) {
+      if (!this->taskList[i]->done()) {
         done = false;
         break;
       }             
@@ -94,23 +112,12 @@ public:
       this->mainWnd.present();
       //
       this->physics.update();
-      //
-      int step = GRID_WIDTH / THREADS_COUNT;
-
+      
       for (size_t t = 0; t < THREADS_COUNT; ++t) {
-        Arguments     args = {};
-        ThreadRoutine task = [this, t, step](Arguments &args) {
-          glm::uvec2  &gridSize   = physics.getGridSize();
-          glm::ivec2   offset     = glm::ivec2(t * step, 0),
-                       size       = glm::ivec2(step, gridSize.y);
+        TaskPtr taskPtr = this->taskList[t];
 
-          physics.solve(offset, size);
-          taskDone[t] = true;
-          Log::instance().print(LOG_INFO, std::string("thread #") + std::to_string(t) + std::string(" done."));
-        };
-
-        this->taskDone[t] = false;
-        this->threadPool.pushTask(task, args);
+        taskPtr->resetDone();
+        this->threadPool.pushTask(taskPtr);
       }
     }
   }
@@ -154,9 +161,9 @@ private:
   GLPreset    glpreset;
   GLResource  glvertices;
   Physics     physics;
-  ThreadPool
-    <THREADS_COUNT> threadPool;
-  bool        taskDone[THREADS_COUNT];
+  ThreadPool  threadPool;
+  
+  TaskPtr     taskList[THREADS_COUNT];
 
   glm::mat4   orthoProjection;
   glm::vec2   mousePosition;
@@ -169,10 +176,7 @@ private:
 
   void init() {
     flags.lBtnPressed = false;
-    flags.lBtnPressed = false;
-    //
-    for (size_t i = 0; i < THREADS_COUNT; ++i)
-      this->taskDone[i] = true;
+    flags.rBtnPressed = false;
     //
     this->createWidnow();
     this->createGLContext();
@@ -189,6 +193,9 @@ private:
     );
         
     this->glvertices = createVertexBuffer<Particle>(0, nullptr, GL_DYNAMIC_DRAW);
+    //
+    for (size_t t = 0; t < THREADS_COUNT; ++t)
+      this->taskList[t] = TaskPtr(new SolverTask(this->physics, t));
   }
 
   void free() {
