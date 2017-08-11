@@ -7,16 +7,14 @@ public:
 
   void exec() {
     while (!this->quitFlag) {
-      TaskPtr taskPtr(nullptr);
+      TaskPtr taskPtr = this->taskList.pop();
 
-      this->taskList.wait();
-      taskPtr = this->taskList.pop();
-
-      if (!taskPtr)
-        continue;
-
-      taskPtr->doTask();
-      taskPtr->setDone();
+      if (taskPtr) {
+        taskPtr->doTask();
+        taskPtr->setDone();
+      }
+      else
+        this->taskList.wait();
     }
   }
 
@@ -69,6 +67,10 @@ void TaskList::wait() {
   this->waitCond.wait(lock);
 }
 
+void TaskList::resumeAll() {
+  this->waitCond.notify_all();
+}
+
 ThreadPool::ThreadPool(size_t count)
   : quitFlag(false) {
   this->alloc(count);
@@ -99,6 +101,8 @@ void ThreadPool::alloc(size_t count) {
 void ThreadPool::free() {
   this->quitFlag = true;
   //
+  this->taskList.resumeAll();
+
   for (size_t i = 0; i < this->getCount(); ++i)
     this->pool[i].wait();
 }

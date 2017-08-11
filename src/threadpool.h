@@ -36,6 +36,8 @@ public:
   TaskPtr pop();
 
   void wait();
+  //  ¬ыводит из ожидани€ все потоки, которые ждут задачи.
+  void resumeAll();
 
 private:
   TaskList(const TaskList &) = delete;

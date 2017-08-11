@@ -1,4 +1,5 @@
 #include <numeric>
+#include <mutex>
 
 #include "physics.h"
 
@@ -89,6 +90,8 @@ const Particle *GridCell::getParticlePtr(size_t index) const {
 }
 
 void GridCell::push(Particle *particle) {
+  std::lock_guard<AtomicLock> lock(this->pushLock);
+
   if (this->count >= DEFAULT_CELL_CAPACITY)
     return;
 
@@ -162,10 +165,8 @@ Physics::Physics(size_t count, const glm::vec2 &size, float dt)
   this->plist.reserve(count);
 }
 
-void Physics::update() {
-  this->grid.clear();
-
-  for (size_t i = 0; i < this->plist.size(); ++i) {
+void Physics::update(size_t offset, size_t count) {
+  for (size_t i = offset; i < offset + count; ++i) {
     Particle &particle = this->plist[i];
 
     particle.zeroDiffSum();
@@ -220,6 +221,10 @@ void Physics::solve(const glm::ivec2 &offset, const glm::ivec2 size) {
         }
       }
     }
+}
+
+void Physics::clearGrid() {
+  this->grid.clear();
 }
 
 std::vector<Particle> &Physics::getParticles() {

@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <glm/glm.hpp>
 
+#include "atomic.h"
+
 const int DEFAULT_CELL_CAPACITY = 32;
 
 class Particle {
@@ -51,8 +53,9 @@ public:
   void clear();
 
 private:
-  size_t     count;
-  Particle  *particles[DEFAULT_CELL_CAPACITY];
+  size_t       count;
+  Particle    *particles[DEFAULT_CELL_CAPACITY];
+  AtomicLock   pushLock;
 };
 
 class Grid {
@@ -88,8 +91,9 @@ public:
       this->plist.push_back(gen(i));
   }
 
-  void update();
+  void update(size_t offset, size_t count);
   void solve(const glm::ivec2 &offset, const glm::ivec2 size);
+  void clearGrid();
 
   std::vector<Particle> &getParticles();
   const std::vector<Particle> &getParticles() const;
