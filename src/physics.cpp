@@ -127,27 +127,6 @@ const GridCell &Grid::operator[](const glm::ivec2 &coord) const {
   return this->cells.get()[coord.x + coord.y * this->size.x];
 }
 
-void Grid::push(Particle *particle) {
-  if (!(*this) || !particle)
-    return;
-
-  this->operator[](glm::uvec2(particle->getPosition())).push(particle);
-}
-
-void Grid::clear() {
-  for (size_t y = 0; y < this->size.y; ++y)
-    for (size_t x = 0; x < this->size.x; ++x)
-      this->operator[](glm::uvec2(x, y)).clear();
-}
-
-glm::uvec2 Grid::getSize() const {
-  return this->size;
-}
-
-size_t Grid::getCount() const {
-  return this->size.x * this->size.y;
-}
-
 void Grid::alloc(const glm::uvec2 &size) {
   try {
     this->cells.reset(new GridCell[size.x * size.y],
@@ -160,9 +139,37 @@ void Grid::alloc(const glm::uvec2 &size) {
   this->size = size;
 }
 
+void Grid::push(Particle *particle) {
+  if (!(*this) || !particle)
+    return;
+
+  this->operator[](glm::uvec2(particle->getPosition())).push(particle);
+}
+
+void Grid::clear(size_t offset, size_t count) {
+  for (size_t y = 0; y < this->size.y; ++y)
+    for (size_t x = offset; x < offset + count; ++x)
+      this->operator[](glm::uvec2(x, y)).clear();
+}
+
+glm::uvec2 Grid::getSize() const {
+  return this->size;
+}
+
+size_t Grid::getCount() const {
+  return this->size.x * this->size.y;
+}
+
+Physics::Physics()
+  : count(0), dt(1.0f), grid(glm::uvec2(0, 0)) {}
+
 Physics::Physics(size_t count, const glm::vec2 &size, float dt)
   : count(count), dt(dt), grid(size) {
   this->plist.reserve(count);
+}
+
+void Physics::clearGrid(size_t offset, size_t count) {
+  this->grid.clear(offset, count);
 }
 
 void Physics::update(size_t offset, size_t count) {
@@ -223,8 +230,16 @@ void Physics::solve(const glm::ivec2 &offset, const glm::ivec2 size) {
     }
 }
 
-void Physics::clearGrid() {
-  this->grid.clear();
+void Physics::setParticlesCount(size_t count) {
+  this->count = count;
+}
+
+void Physics::setGridSize(const glm::uvec2 &size) {
+  this->grid.alloc(size);
+}
+
+void Physics::setDt(float dt) {
+  this->dt = dt;
 }
 
 std::vector<Particle> &Physics::getParticles() {

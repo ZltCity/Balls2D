@@ -9,7 +9,7 @@
 
 #include "atomic.h"
 
-const int DEFAULT_CELL_CAPACITY = 32;
+const int DEFAULT_CELL_CAPACITY = 8;
 
 class Particle {
 public:
@@ -67,8 +67,10 @@ public:
   GridCell &operator[](const glm::ivec2 &coord);
   const GridCell &operator[](const glm::ivec2 &coord) const;
 
+  void alloc(const glm::uvec2 &size);
+
   void push(Particle *particle);
-  void clear();
+  void clear(size_t offset, size_t count);
 
   glm::uvec2 getSize() const;
   size_t getCount() const;
@@ -77,23 +79,28 @@ private:
   std::shared_ptr
     <GridCell>  cells;
   glm::uvec2    size;
-
-  void alloc(const glm::uvec2 &size);
 };
 
 class Physics {
 public:
+  Physics();
   Physics(size_t count, const glm::vec2 &size, float dt);
 
   template<typename TGenerator>
   void init(TGenerator &&gen) {
+    this->plist.resize(this->count);
+    //
     for (size_t i = 0; i < this->count; ++i)
-      this->plist.push_back(gen(i));
+      this->plist[i] = gen(i);
   }
 
+  void clearGrid(size_t offset, size_t count);
   void update(size_t offset, size_t count);
   void solve(const glm::ivec2 &offset, const glm::ivec2 size);
-  void clearGrid();
+
+  void setParticlesCount(size_t count);
+  void setGridSize(const glm::uvec2 &size);
+  void setDt(float dt);
 
   std::vector<Particle> &getParticles();
   const std::vector<Particle> &getParticles() const;

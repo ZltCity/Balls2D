@@ -48,13 +48,15 @@ private:
   //AtomicLock entryLock;
   //  –еализаци€ со стандартным мьютексом вы итоге получаетс€ быстрее из-за того что потоки правильно усыпл€ютс€.
   std::mutex entryLock;
-  std::condition_variable_any waitCond;
+  std::condition_variable waitCond;
 };
 
 class ThreadPool {
 public:
-  ThreadPool(size_t count = 8);
+  ThreadPool();
   ~ThreadPool();
+
+  void alloc(size_t count);
 
   void pushTask(TaskPtr &taskPtr);
 
@@ -68,6 +70,5 @@ private:
   TaskList taskList;
   bool quitFlag;
 
-  void alloc(size_t count);
   void free();
 };

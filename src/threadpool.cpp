@@ -67,21 +67,11 @@ void TaskList::wait(std::unique_lock<std::mutex> &lock) {
   this->waitCond.wait(lock);
 }
 
-ThreadPool::ThreadPool(size_t count)
-  : quitFlag(false) {
-  this->alloc(count);
-}
+ThreadPool::ThreadPool()
+  : quitFlag(false) {}
 
 ThreadPool::~ThreadPool() {
   this->free();
-}
-
-void ThreadPool::pushTask(TaskPtr &taskPtr) {
-  this->taskList.push(taskPtr);
-}
-
-size_t ThreadPool::getCount() const {
-  return this->pool.size();
 }
 
 void ThreadPool::alloc(size_t count) {
@@ -92,6 +82,14 @@ void ThreadPool::alloc(size_t count) {
 
     this->pool[i] = std::move(thread);
   }
+}
+
+void ThreadPool::pushTask(TaskPtr &taskPtr) {
+  this->taskList.push(taskPtr);
+}
+
+size_t ThreadPool::getCount() const {
+  return this->pool.size();
 }
 
 void ThreadPool::free() {

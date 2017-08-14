@@ -8,25 +8,31 @@
 #include "window.h"
 #include "file.h"
 #include "log.h"
+#include "config.h"
 #include "threadpool.h"
 
 #include "physics.h"
 
-const int     SCREEN_WIDTH      = 950,
-              SCREEN_HEIGHT     = 950,
-              SCREEN_X          = 50,
-              SCREEN_Y          = 50,
-              GRID_WIDTH        = 128,
-              GRID_HEIGHT       = 128,
-              PARTICLES_COUNT   = 12000,
-              THREADS_COUNT     = 4;
-
 const float   G_CONST           = static_cast<float>(0.1f/*6.67e-11*/);
+
+class ClearTask : public Task {
+public:
+  ClearTask(Physics &physics, size_t index, size_t count)
+    : physics(physics), index(index), count(count) {}
+
+  void doTask() {
+    this->physics.clearGrid(index * count, count);
+  }
+
+private:
+  Physics &physics;
+  size_t index, count;
+};
 
 class UpdateTask : public Task {
 public:
-  UpdateTask(Physics &physics, size_t index)
-    : physics(physics), index(index), count(PARTICLES_COUNT / THREADS_COUNT) {}
+  UpdateTask(Physics &physics, size_t index, size_t count)
+    : physics(physics), index(index), count(count) {}
 
   void doTask() {
     this->physics.update(index * count, count);
@@ -39,8 +45,8 @@ private:
 
 class SolverTask : public Task {
 public:
-  SolverTask(Physics &physics, size_t index)
-    : physics(physics), index(index), step(GRID_WIDTH / THREADS_COUNT) {}
+  SolverTask(Physics &physics, size_t index, size_t step)
+    : physics(physics), index(index), step(step) {}
 
   void doTask() {
     glm::uvec2  &gridSize   = physics.getGridSize();
@@ -58,7 +64,7 @@ private:
 class MyApplication : public Application {
 public:
   MyApplication()
-    : state(ENTRY_STATE), physics(PARTICLES_COUNT, glm::uvec2(GRID_WIDTH, GRID_HEIGHT), 0.01f), threadPool(THREADS_COUNT) {
+    : state(ENTRY_STATE) {
   }
 
   void onStart() {
@@ -73,7 +79,11 @@ public:
   void onFrame() {
     switch (this->state) {
       case ENTRY_STATE: {
-        this->startUpdate();
+        this->startClear();
+        break;
+      }
+      case CLEAR_STATE: {
+        this->checkClear();
         break;
       }
       case UPDATE_STATE: {
@@ -90,7 +100,7 @@ public:
   void onMouseMove(const glm::vec2 &pos, bool relative) {
     if (!relative) {
       this->mousePosition.x = pos.x;
-      this->mousePosition.y = SCREEN_HEIGHT - pos.y;
+      this->mousePosition.y = this->config.windowSize.y - pos.y;
     }
   }
 
@@ -123,52 +133,73 @@ public:
 private:
   enum {
     ENTRY_STATE,
+    CLEAR_STATE,
     UPDATE_STATE,
     SOLVER_STATE
   } state;
 
-  Window      mainWnd;
-  GLContext   glContext;
-  GLPreset    glpreset;
-  GLResource  glvertices;
-  Physics     physics;
-  ThreadPool  threadPool;
-  
-  TaskPtr     updateTaskList[THREADS_COUNT],
-              solverTaskList[THREADS_COUNT];
+  Config        config;
 
-  glm::mat4   orthoProjection;
-  glm::vec2   mousePosition;
+  Window        mainWnd;
+  GLContext     glContext;
+  GLPreset      glpreset;
+  GLResource    glvertices;
+  Physics       physics;
+  ThreadPool    threadPool;
+
+  std::vector
+    <Particle>  plistCopy;
+  
+  std::vector
+    <TaskPtr>   clearTaskList,
+                updateTaskList,
+                solverTaskList;
+
+  glm::mat4     orthoProjection;
+  glm::vec2     mousePosition;
 
   struct {
     bool lBtnPressed, rBtnPressed;
   } flags;
 
-  //std::vector<glm::ivec2> ps;
-
   void init() {
     flags.lBtnPressed = false;
     flags.rBtnPressed = false;
+    //
+    if (!config.loadFromFile("config.json"))
+      Log::instance().print(LOG_WARN, std::string("Config file is missing, program defaults has loaded."));
     //
     this->createWidnow();
     this->createGLContext();
     this->loadResources();
     //
+    //
     std::random_device                rdev;
-    std::uniform_real_distribution<>  dx(5.0f, static_cast<float>(GRID_WIDTH) - 5.0f),
-                                      dy(5.0f, static_cast<float>(GRID_HEIGHT) - 5.0f);
+    std::uniform_real_distribution<>  dx(5.0f, static_cast<float>(this->config.gridSize.x) - 5.0f),
+                                      dy(5.0f, static_cast<float>(this->config.gridSize.y) - 5.0f);
 
+    this->physics.setParticlesCount(this->config.particlesCount);
+    this->physics.setGridSize(this->config.gridSize);
+    this->physics.setDt(this->config.dt);
     this->physics.init(
       [&](size_t) {
         return Particle(glm::vec2(dx(rdev), dy(rdev)));
       }
-    );
+    );   
         
     this->glvertices = createVertexBuffer<Particle>(0, nullptr, GL_DYNAMIC_DRAW);
     //
-    for (size_t t = 0; t < THREADS_COUNT; ++t) {
-      this->updateTaskList[t] = TaskPtr(new UpdateTask(this->physics, t));
-      this->solverTaskList[t] = TaskPtr(new SolverTask(this->physics, t));
+    this->threadPool.alloc(this->config.threadsCount);
+    this->clearTaskList.resize(this->config.threadsCount);
+    this->updateTaskList.resize(this->config.threadsCount);
+    this->solverTaskList.resize(this->config.threadsCount);
+
+    size_t gridStep = this->config.gridSize.x / this->config.threadsCount;
+
+    for (size_t t = 0; t < this->config.threadsCount; ++t) {
+      this->clearTaskList[t] = TaskPtr(new ClearTask(this->physics, t, gridStep));
+      this->updateTaskList[t] = TaskPtr(new UpdateTask(this->physics, t, this->config.particlesCount / this->config.threadsCount));
+      this->solverTaskList[t] = TaskPtr(new SolverTask(this->physics, t, gridStep));
     }
   }
 
@@ -178,7 +209,7 @@ private:
   void createWidnow() {
     Log &log = Log::instance();
 
-    if (this->mainWnd.create(std::string("Some shitty physics, v1.0"), SCREEN_X, SCREEN_Y, SCREEN_WIDTH, SCREEN_HEIGHT))
+    if (this->mainWnd.create(std::string("Some shitty physics, v1.0"), this->config.windowPos.x, this->config.windowPos.y, this->config.windowSize.x, this->config.windowSize.y))
       log.print(LOG_INFO, std::string("Main window creation succeed."));
     else {
       log.print(LOG_CRIT, std::string("Main window creation failed."));
@@ -207,14 +238,14 @@ private:
       std::exit(EXIT_FAILURE);
     }
 
-    this->glpreset.setOrthoSize(glm::vec2(GRID_WIDTH, GRID_HEIGHT));
-    this->glpreset.setScreenSize(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT));
+    this->glpreset.setOrthoSize(this->config.gridSize);
+    this->glpreset.setScreenSize(this->config.windowSize);
 
     this->orthoProjection = this->glpreset.projection();
   }
 
   void startTaskList(TaskPtr taskList[]) {
-    for (size_t t = 0; t < THREADS_COUNT; ++t) {
+    for (size_t t = 0; t < this->config.threadsCount; ++t) {
       TaskPtr taskPtr = taskList[t];
 
       taskPtr->resetDone();
@@ -225,7 +256,7 @@ private:
   bool checkTaskList(TaskPtr taskList[]) {
     bool done = true;
 
-    for (size_t t = 0; t < THREADS_COUNT; ++t)
+    for (size_t t = 0; t < this->config.threadsCount; ++t)
       if (!taskList[t]->done()) {
         done = false;
 
@@ -235,32 +266,41 @@ private:
     return done;
   }
 
+  void startClear() {
+    this->startTaskList(this->clearTaskList.data());
+    this->state = CLEAR_STATE;
+  }
+
+  void checkClear() {
+    if (checkTaskList(this->clearTaskList.data()))
+      this->startUpdate();
+  }
+
   void startUpdate() {
-    this->physics.clearGrid();
-    this->startTaskList(this->updateTaskList);
+    this->startTaskList(this->updateTaskList.data());
     this->state = UPDATE_STATE;
   }
 
   void checkUpdate() {
-    if (checkTaskList(this->updateTaskList))
+    if (checkTaskList(this->updateTaskList.data()))
       this->startSolver();
   }
 
   void startSolver() {
-    this->startTaskList(this->solverTaskList);
+    this->startTaskList(this->solverTaskList.data());
     this->state = SOLVER_STATE;
   }
 
   void checkSolver() {
-    if (checkTaskList(this->solverTaskList))
+    if (checkTaskList(this->solverTaskList.data()))
       this->doRender();
   }
 
   void doRender() {
     glm::mat4 inverted  = glm::inverse(this->orthoProjection);
     glm::vec4 cursor    = inverted * glm::vec4(
-      mousePosition.x / SCREEN_WIDTH * 2.0f - 1.0f, 
-      mousePosition.y / SCREEN_HEIGHT * 2.0f - 1.0f, 0.0f, 1.0f);
+      mousePosition.x / this->config.windowSize.x * 2.0f - 1.0f, 
+      mousePosition.y / this->config.windowSize.y * 2.0f - 1.0f, 0.0f, 1.0f);
 
     for (Particle &particle : this->physics.getParticles()) {
       particle.applyForce(glm::vec2(0.0f, -1.0f));
@@ -282,7 +322,7 @@ private:
       particle.applyForce(glm::normalize(dist) * strengh);
     }
 
-    writeVertexBuffer(this->glvertices, PARTICLES_COUNT, this->physics.getParticles().data(), GL_DYNAMIC_DRAW);
+    writeVertexBuffer(this->glvertices, this->config.particlesCount, this->physics.getParticles().data(), GL_DYNAMIC_DRAW);
 
     this->glpreset.use();
     bindVertexBuffer(this->glvertices);
@@ -295,7 +335,7 @@ private:
     glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
     
     glClear(GL_COLOR_BUFFER_BIT);
-    glDrawArrays(GL_POINTS, 0, PARTICLES_COUNT);
+    glDrawArrays(GL_POINTS, 0, this->config.particlesCount);
 
     this->mainWnd.present();
     //
