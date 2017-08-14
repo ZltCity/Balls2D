@@ -33,18 +33,21 @@ public:
   TaskList() = default;
 
   void push(TaskPtr &taskPtr);
-  TaskPtr pop();
-
-  void wait();
   //  Выводит из ожидания все потоки, которые ждут задачи.
   void resumeAll();
+  //  Выполнение одной задачи из списка. Функция переводит поток в режим ожидания, если задач нет.
+  friend void doTask(TaskList &taskList);
 
 private:
   TaskList(const TaskList &) = delete;
   TaskList &operator=(const TaskList &) = delete;
 
+  void wait(std::unique_lock<std::mutex> &lock);
+
   std::list<TaskPtr> list;
-  AtomicLock entryLock;
+  //AtomicLock entryLock;
+  //  Реализация со стандартным мьютексом вы итоге получается быстрее из-за того что потоки правильно усыпляются.
+  std::mutex entryLock;
   std::condition_variable_any waitCond;
 };
 

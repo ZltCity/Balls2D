@@ -1,21 +1,15 @@
 #include "threadpool.h"
 
+const size_t WORKER_SLEEP_DELAY = 10;
+
 class ProxyWorker : public Worker {
 public:
   ProxyWorker(TaskList &taskList, bool &quitFlag)
     : taskList(taskList), quitFlag(quitFlag) {}
 
   void exec() {
-    while (!this->quitFlag) {
-      TaskPtr taskPtr = this->taskList.pop();
-
-      if (taskPtr) {
-        taskPtr->doTask();
-        taskPtr->setDone();
-      }
-      else
-        this->taskList.wait();
-    }
+    while (!this->quitFlag)
+      doTask(this->taskList);
   }
 
 private:
@@ -41,34 +35,36 @@ void Task::resetDone() {
 }
 
 void TaskList::push(TaskPtr &taskPtr) {
-  std::unique_lock<AtomicLock> lock(this->entryLock);
+  std::unique_lock<std::mutex> lock(this->entryLock);
 
   this->list.push_back(taskPtr);
   this->waitCond.notify_one();
 }
 
-TaskPtr TaskList::pop() {
-  std::unique_lock<AtomicLock> lock(this->entryLock);
-  TaskPtr taskPtr(nullptr);
-
-  if (this->list.size() > 0) {
-    taskPtr = this->list.front();
-    this->list.pop_front();
-  }
-
-  lock.unlock();
-
-  return taskPtr;
-}
-
-void TaskList::wait() {
-  std::unique_lock<AtomicLock> lock(this->entryLock);
-
-  this->waitCond.wait(lock);
-}
-
 void TaskList::resumeAll() {
   this->waitCond.notify_all();
+}
+
+void doTask(TaskList &taskList) {
+  std::unique_lock<std::mutex> lock(taskList.entryLock);
+  std::list<TaskPtr> &list = taskList.list;
+  TaskPtr taskPtr(nullptr);
+
+  if (list.size() == 0) {
+    taskList.wait(lock);
+
+    return;
+  }
+
+  taskPtr = list.front();
+  list.pop_front();
+  lock.unlock();
+  taskPtr->doTask();
+  taskPtr->setDone();
+}
+
+void TaskList::wait(std::unique_lock<std::mutex> &lock) {
+  this->waitCond.wait(lock);
 }
 
 ThreadPool::ThreadPool(size_t count)
