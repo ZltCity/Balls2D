@@ -1,7 +1,5 @@
 #include "threadpool.h"
 
-const size_t WORKER_SLEEP_DELAY = 10;
-
 class ProxyWorker : public Worker {
 public:
   ProxyWorker(TaskList &taskList, bool &quitFlag)

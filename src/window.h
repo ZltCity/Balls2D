@@ -15,6 +15,8 @@ public:
   bool create(const std::string &title, int x, int y, int w, int h);
   void present();
 
+  void setCaption(const std::string &title);
+
 protected:
   SDL_Window *getHandle() const;
 

@@ -79,6 +79,8 @@ void writeVertexBuffer(GLResource &res, size_t count, const TVertex *data, GLenu
   if (!res || count == 0)
     return;
 
+  GLuint id = res.id();
+
   glNamedBufferData(res.id(), sizeof(TVertex) * count, data, usage);
 }
 

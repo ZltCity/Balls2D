@@ -11,9 +11,8 @@
 #include "config.h"
 #include "threadpool.h"
 
+#include "timer.h"
 #include "physics.h"
-
-const float   G_CONST           = static_cast<float>(0.1f/*6.67e-11*/);
 
 class ClearTask : public Task {
 public:
@@ -64,7 +63,7 @@ private:
 class MyApplication : public Application {
 public:
   MyApplication()
-    : state(ENTRY_STATE) {
+    : state(ENTRY_STATE), frameTimeAccum(0.0f), renderTimeAccum(0.0f), physicsTimeAccum(0.0f), solverTimeAccum(0.0f), frames(0) {
   }
 
   void onStart() {
@@ -74,7 +73,9 @@ public:
     return 0;
   }
 
-  void onPreFrame()   {}
+  void onPreFrame()   {
+    this->measureFrameTime();
+  }
   void onPostFrame()  {}
   void onFrame() {
     switch (this->state) {
@@ -158,6 +159,18 @@ private:
   glm::mat4     orthoProjection;
   glm::vec2     mousePosition;
 
+  Timer         frameTimer,
+                renderTimer,
+                physicsTimer,
+                solverTimer;
+
+  float         frameTimeAccum,
+                renderTimeAccum,
+                physicsTimeAccum,
+                solverTimeAccum;
+
+  int           frames;
+
   struct {
     bool lBtnPressed, rBtnPressed;
   } flags;
@@ -215,6 +228,8 @@ private:
       log.print(LOG_CRIT, std::string("Main window creation failed."));
       std::exit(EXIT_FAILURE);
     }
+
+    this->updateWindowCaption();
   }
 
   void createGLContext() {
@@ -267,6 +282,8 @@ private:
   }
 
   void startClear() {
+    this->physicsTimer.reset();
+    //
     this->startTaskList(this->clearTaskList.data());
     this->state = CLEAR_STATE;
   }
@@ -282,8 +299,11 @@ private:
   }
 
   void checkUpdate() {
-    if (checkTaskList(this->updateTaskList.data()))
+    if (checkTaskList(this->updateTaskList.data())) {
+      this->solverTimer.reset();
+      //
       this->startSolver();
+    }
   }
 
   void startSolver() {
@@ -292,8 +312,44 @@ private:
   }
 
   void checkSolver() {
-    if (checkTaskList(this->solverTaskList.data()))
+    if (checkTaskList(this->solverTaskList.data())) {
+      this->solverTimeAccum += this->solverTimer.reset();
+      this->physicsTimeAccum += this->physicsTimer.reset();
+      this->renderTimer.reset();
+      //
       this->doRender();
+      //
+      this->renderTimeAccum += this->renderTimer.reset();
+    }
+  }
+
+  void measureFrameTime() {
+    if (this->frameTimeAccum >= 1000.000f) {
+      this->updateWindowCaption();
+
+      this->frameTimeAccum = 0.0f;
+      this->renderTimeAccum = 0.0f;
+      this->physicsTimeAccum = 0.0f;
+      this->solverTimeAccum = 0.0f;
+      this->frames = 0;
+    }
+
+    this->frameTimeAccum += this->frameTimer.reset();
+  }
+
+  void updateWindowCaption() {
+    char buff[256] = { '\0' };
+
+    std::snprintf(
+      buff, sizeof(buff), 
+      "Some shitty physics, v1.0 | fps %4i | avg frametime %2.2f ms | avg render time %2.2f ms | avg physics time %2.2f ms | avg solver time %2.2f ms", 
+      this->frames, 
+      this->frameTimeAccum / this->frames,
+      this->renderTimeAccum / this->frames,
+      this->physicsTimeAccum / this->frames,
+      this->solverTimeAccum / this->frames);
+
+    this->mainWnd.setCaption(std::string(buff));
   }
 
   void doRender() {
@@ -338,6 +394,8 @@ private:
     glDrawArrays(GL_POINTS, 0, this->config.particlesCount);
 
     this->mainWnd.present();
+
+    this->frames++;
     //
     this->state = ENTRY_STATE;
   }

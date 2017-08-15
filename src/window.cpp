@@ -20,6 +20,11 @@ void Window::present() {
     SDL_GL_SwapWindow(this->wPtr.get());
 }
 
+void Window::setCaption(const std::string &title) {
+  if (this->wPtr)
+    SDL_SetWindowTitle(this->wPtr.get(), title.c_str());
+}
+
 SDL_Window *Window::getHandle() const {
   return this->wPtr.get();
 }
