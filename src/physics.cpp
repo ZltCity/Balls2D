@@ -208,7 +208,7 @@ void Physics::solve(const glm::ivec2 &offset, const glm::ivec2 size) {
     for (int cx = offset.x; cx < offset.x + size.x; ++cx) {
       GridCell  &c0 = this->grid[glm::uvec2(cx, cy)];
 
-      //  Проверка с самой собой(ячейкой).
+      //  РџСЂРѕРІРµСЂРєР° СЃ СЃР°РјРѕР№ СЃРѕР±РѕР№(СЏС‡РµР№РєРѕР№).
       solveCell(*c0.getParticlePtr(0), c0, 1);
 
       for (size_t pi = 0; pi < c0.getCount(); ++pi) {

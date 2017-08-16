@@ -9,7 +9,7 @@ public:
   float reset();
 
 private:
-  //  Только для внутреннего пользования, иначе уж больно монструозные конструкции приходится лепить.
+  //  РўРѕР»СЊРєРѕ РґР»СЏ РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РїРѕР»СЊР·РѕРІР°РЅРёСЏ, РёРЅР°С‡Рµ СѓР¶ Р±РѕР»СЊРЅРѕ РјРѕРЅСЃС‚СЂСѓРѕР·РЅС‹Рµ РєРѕРЅСЃС‚СЂСѓРєС†РёРё РїСЂРёС…РѕРґРёС‚СЃСЏ Р»РµРїРёС‚СЊ.
   typedef std::chrono::high_resolution_clock        Clock;
   typedef std::chrono::time_point<Clock>            TimePoint;
   typedef std::chrono::duration<float, std::milli>  Duration;
