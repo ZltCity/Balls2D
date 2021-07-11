@@ -1,33 +1,73 @@
-cmake_minimum_required(VERSION 3.5)
-project(xrepo)
+cmake_minimum_required(VERSION 3.15)
 
-set(CMAKE_CXX_STANDARD 14)
+project(BlueWater2)
 
-function(find_and_include_libs LIB_NAME)
-    find_package(${LIB_NAME} REQUIRED)
-    include_directories(${${LIB_NAME}_INCLUDE_DIRS})
-endfunction(find_and_include_libs)
+include(ExternalProject)
 
-function(add_lib LIB_NAME)
-    find_and_include_libs(${LIB_NAME})
-    set(LIBS ${LIBS} ${LIB_NAME} PARENT_SCOPE)
-endfunction(add_lib)
+# CMake arguments for external projects.
+list(
+	APPEND	CONTRIB_CMAKE_ARGS	-DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
+								-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+								-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+								-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
+								-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/contrib
+)
 
-function(add_auto_lib LIB_NAME)
-    find_and_include_libs(${LIB_NAME})
-    set(LIBS ${LIBS} ${${LIB_NAME}_LIBRARIES} PARENT_SCOPE)
-endfunction(add_auto_lib)
+if (CMAKE_SYSTEM_NAME MATCHES Android)
+	list(
+		APPEND	CONTRIB_CMAKE_ARGS	-DCMAKE_ANDROID_NDK=${CMAKE_ANDROID_NDK}
+									-DANDROID_TOOLCHAIN=${ANDROID_TOOLCHAIN}
+									-DANDROID_PLATFORM=${ANDROID_PLATFORM}
+									-DANDROID_ABI=${ANDROID_ABI}
+									-DANDROID_STL=${ANDROID_STL}
+	)
+endif()
 
-include(conanbuildinfo.cmake)
-conan_basic_setup()
-include_directories(${CONAN_INCLUDE_DIRS})
+include_directories(
+	${CMAKE_SOURCE_DIR}/include
+	${CMAKE_SOURCE_DIR}/install/contrib/include
+	${ANDROID_NDK}/sources/android/native_app_glue
+)
 
-add_lib(SDL2)
-add_lib(Box2D)
-add_auto_lib(OpenGL)
+add_subdirectory(contrib/format)
+add_subdirectory(contrib/glm)
+add_subdirectory(contrib/json)
 
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(SOURCE_FILES src/main.cpp src/application.cpp src/gl_context.cpp src/gl_core_4_5.c src/log.cpp src/window.cpp)
+add_library(
+	b2 STATIC	src/application.cpp
+				src/assetmanager.cpp
+				src/camera.cpp
+				src/config.cpp
+				src/exception.cpp
+				src/game.cpp
+				src/gapi.cpp
+				src/gearbox.cpp
+				src/isosurface.cpp
+				src/logger.cpp
+				src/main.cpp
+				src/physics.cpp
+				src/spinlock.cpp
+				src/system.cpp
+				src/test_scene.cpp
+				src/threadpool.cpp
+				src/timer.cpp
+)
 
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} ${LIBS} ${CONAN_LIBS} GL)
+add_dependencies(
+	b2	format
+		glm
+		json
+)
+
+install(TARGETS b2 DESTINATION ${CMAKE_INSTALL_PREFIX})
+
+if (CMAKE_SYSTEM_NAME MATCHES Android)
+	if (CMAKE_HOST_SYSTEM_NAME MATCHES Linux)
+		set(GRADLE_SCRIPT run-gradle.sh)
+	endif()
+
+	add_custom_command(
+		TARGET	b2	POST_BUILD
+		COMMAND BLUEWATER2_ROOT=${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/${GRADLE_SCRIPT} ${CMAKE_SOURCE_DIR}/android
+	)
+endif()

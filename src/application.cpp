@@ -1,61 +1,10 @@
-#include <cstdlib>
-#include <SDL.h>
 
-#include "log.h"
-#include "application.h"
 
-class __InitHelper {
-public:
-  __InitHelper() {
-    Log &log = Log::instance();
+#include "application.hpp"
 
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-      log.print(LOG_CRIT, std::string("SDL init failed."));
-      std::exit(EXIT_FAILURE);
-    }
+#include "logger.hpp"
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,  SDL_GL_CONTEXT_PROFILE_CORE);
-
-    log.print(LOG_INFO, std::string("SDL init succeed."));
-  }
-
-  ~__InitHelper() {
-    SDL_Quit();
-  }
-
-};
-
-static __InitHelper __initHelper;
-
-Application::Application()
-{}
-
-Application::~Application()
-{}
-
-int Application::start(int argc, char **argv)
+namespace b2::application
 {
-  this->onStart();
 
-  SDL_Event e;
-  bool      q = false;
-
-  while (!q) {
-    this->onPreFrame();
-
-    while (SDL_PollEvent(&e))
-      switch (e.type) {
-        case SDL_QUIT: {
-          q = true;
-          break;
-        }
-      }
-
-    this->onFrame();
-    this->onPostFrame();
-  }
-
-  return this->onQuit();
-}
+} // namespace b2::application

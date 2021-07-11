@@ -1,9 +1,4 @@
-bin/
-lib/
-ext/
 build/
-msvs2015/
-cmake-build*/
+install
 .idea/
-conanbuild*
-conaninfo*
+.cxx/
