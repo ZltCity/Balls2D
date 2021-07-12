@@ -1,10 +1,11 @@
 #include <EGL/egl.h>
 #include <android/sensor.h>
 
+#include <exception.hpp>
+#include <game.hpp>
+#include <gapi.hpp>
+
 #include "application.hpp"
-#include "exception.hpp"
-#include "game.hpp"
-#include "gapi.hpp"
 
 namespace b2::android
 {

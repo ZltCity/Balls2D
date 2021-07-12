@@ -24,34 +24,14 @@ if (CMAKE_SYSTEM_NAME MATCHES Android)
 endif()
 
 include_directories(
-	${CMAKE_SOURCE_DIR}/include
 	${CMAKE_SOURCE_DIR}/install/contrib/include
 	${ANDROID_NDK}/sources/android/native_app_glue
 )
 
+add_subdirectory(b2)
 add_subdirectory(contrib/format)
 add_subdirectory(contrib/glm)
 add_subdirectory(contrib/json)
-
-add_library(
-	b2 STATIC	src/application.cpp
-				src/assetmanager.cpp
-				src/camera.cpp
-				src/config.cpp
-				src/exception.cpp
-				src/game.cpp
-				src/gapi.cpp
-				src/gearbox.cpp
-				src/isosurface.cpp
-				src/logger.cpp
-				src/main.cpp
-				src/physics.cpp
-				src/spinlock.cpp
-				src/system.cpp
-				src/test_scene.cpp
-				src/threadpool.cpp
-				src/timer.cpp
-)
 
 add_dependencies(
 	b2	format
@@ -59,15 +39,13 @@ add_dependencies(
 		json
 )
 
-install(TARGETS b2 DESTINATION ${CMAKE_INSTALL_PREFIX})
-
 if (CMAKE_SYSTEM_NAME MATCHES Android)
 	if (CMAKE_HOST_SYSTEM_NAME MATCHES Linux)
 		set(GRADLE_SCRIPT run-gradle.sh)
 	endif()
 
-	add_custom_command(
-		TARGET	b2	POST_BUILD
-		COMMAND BLUEWATER2_ROOT=${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/${GRADLE_SCRIPT} ${CMAKE_SOURCE_DIR}/android
-	)
+#	add_custom_command(
+#		TARGET	b2	POST_BUILD
+#		COMMAND BLUEWATER2_ROOT=${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/${GRADLE_SCRIPT} ${CMAKE_SOURCE_DIR}/android
+#	)
 endif()

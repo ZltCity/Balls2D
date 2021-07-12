@@ -8,7 +8,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
 
 include_directories(
-	${BLUEWATER2_ROOT}/include
+	${BLUEWATER2_ROOT}/b2/include
 	${BLUEWATER2_ROOT}/install/contrib/include
 	${ANDROID_NDK}/sources/android/native_app_glue
 )
@@ -23,8 +23,8 @@ add_library(
 )
 
 add_library(
-	bluewater	SHARED	application.cpp
-						main.cpp
+	bluewater	SHARED	src/application.cpp
+						src/main.cpp
 )
 
 target_link_libraries(
