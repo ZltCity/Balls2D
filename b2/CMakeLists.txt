@@ -8,8 +8,8 @@ add_library(
 				src/event.cpp
 				src/exception.cpp
 				src/game.cpp
-				src/gapi.cpp
 				src/gearbox.cpp
+				src/gl.cpp
 				src/isosurface.cpp
 				src/logger.cpp
 				src/main.cpp
@@ -35,8 +35,8 @@ list(
 								include/event.hpp
 								include/exception.hpp
 								include/game.hpp
-								include/gapi.hpp
 								include/gearbox.hpp
+								include/gl.hpp
 								include/isosurface.hpp
 								include/logger.hpp
 								include/physics.hpp

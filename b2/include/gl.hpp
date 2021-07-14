@@ -7,54 +7,54 @@
 #include "bytebuffer.hpp"
 #include "exception.hpp"
 
-namespace b2::render
+namespace b2::gl
 {
 
-enum class BufferType : int32_t
+enum class BufferType
 {
 	Vertex = GL_ARRAY_BUFFER,
 	Index = GL_ELEMENT_ARRAY_BUFFER
 };
 
-enum class BufferUsage : int32_t
+enum class BufferUsage
 {
 	Stream = GL_STREAM_DRAW,
 	Static = GL_STATIC_DRAW,
 	Dynamic = GL_DYNAMIC_DRAW
 };
 
-enum class TextureType : int32_t
+enum class TextureType
 {
 	Texture2D = GL_TEXTURE_2D,
 	Texture3D = GL_TEXTURE_3D
 };
 
-enum class TextureFormat : int32_t
+enum class TextureFormat
 {
 	Red8 = GL_RED,
 	RGB = GL_RGB,
 	RGBA = GL_RGBA
 };
 
-enum class TextureFilter : int32_t
+enum class TextureFilter
 {
 	Nearest = GL_NEAREST,
 	Linear = GL_LINEAR
 };
 
-enum class TexelType : int32_t
+enum class TexelType
 {
 	Byte = GL_UNSIGNED_BYTE,
 	Float = GL_FLOAT
 };
 
-enum class ShaderType : int32_t
+enum class ShaderType
 {
 	Vertex = GL_VERTEX_SHADER,
 	Fragment = GL_FRAGMENT_SHADER
 };
 
-enum class ClearMode : int32_t
+enum class ClearMode
 {
 	Color = GL_COLOR_BUFFER_BIT,
 	Depth = GL_DEPTH_BUFFER_BIT
@@ -62,25 +62,25 @@ enum class ClearMode : int32_t
 
 ClearMode operator|(ClearMode m1, ClearMode m2);
 
-enum class Feature : int32_t
+enum class Feature
 {
 	DepthTest = GL_DEPTH_TEST,
 	Blend = GL_BLEND
 };
 
-enum class BlendFactor : int32_t
+enum class BlendFactor
 {
 	SrcAlpha = GL_SRC_ALPHA,
 	OneMinusSrcAlpha = GL_ONE_MINUS_SRC_ALPHA
 };
 
-enum class DrawMode : int32_t
+enum class DrawMode
 {
 	Points = GL_POINTS,
 	Triangles = GL_TRIANGLES
 };
 
-enum class AttribType : int32_t
+enum class AttribType
 {
 	Float = GL_FLOAT
 };
@@ -91,12 +91,12 @@ struct VertexAttrib
 	AttribType type;
 };
 
-class GAPIObject
+class GLObject
 {
 public:
-	GAPIObject() = default;
-	GAPIObject(GLuint handle, std::function<void(GLuint)> &&destructor);
-	virtual ~GAPIObject() = 0;
+	GLObject() = default;
+	GLObject(GLuint handle, std::function<void(GLuint)> destructor);
+	virtual ~GLObject() = 0;
 
 	operator bool() const;
 
@@ -106,7 +106,7 @@ private:
 	std::shared_ptr<GLuint> handle;
 };
 
-class Buffer : public GAPIObject
+class Buffer : public GLObject
 {
 public:
 	Buffer() = default;
@@ -127,7 +127,7 @@ private:
 	BufferType type;
 };
 
-class Texture : public GAPIObject
+class Texture : public GLObject
 {
 public:
 	Texture() = default;
@@ -155,7 +155,7 @@ private:
 	TexelType texelType;
 };
 
-class Shader : public GAPIObject
+class Shader : public GLObject
 {
 public:
 	Shader() = default;
@@ -165,7 +165,7 @@ private:
 	GLuint create(ShaderType type, const Bytebuffer &buffer);
 };
 
-class ShaderProgram : public GAPIObject
+class ShaderProgram : public GLObject
 {
 public:
 	ShaderProgram() = default;
@@ -289,7 +289,7 @@ auto _i(F f, Args... args) -> typename std::invoke_result<F, Args...>::type;
 
 template<typename Primitive>
 Buffer::Buffer(BufferType type, const std::vector<Primitive> &buffer, BufferUsage usage)
-	: GAPIObject(create(type, buffer, usage), [](GLuint handle) { glDeleteBuffers(1, &handle); }), type(type)
+	: GLObject(create(type, buffer, usage), [](GLuint handle) { glDeleteBuffers(1, &handle); }), type(type)
 {}
 
 template<typename Primitive>
@@ -313,7 +313,7 @@ GLuint Buffer::create(BufferType type, const std::vector<Primitive> &buffer, Buf
 template<typename Texel, typename Size>
 Texture::Texture(
 	TextureType type, TextureFormat format, TexelType texelType, const Size &size, const std::vector<Texel> &buffer)
-	: GAPIObject(create(type, format, texelType, size, buffer), [](GLuint handle) { glDeleteTextures(1, &handle); }),
+	: GLObject(create(type, format, texelType, size, buffer), [](GLuint handle) { glDeleteTextures(1, &handle); }),
 	  type(type),
 	  format(format),
 	  texelType(texelType)
@@ -417,4 +417,4 @@ auto _i(F f, Args... args) -> typename std::invoke_result<F, Args...>::type
 	}
 }
 
-} // namespace b2::render
+} // namespace b2::gl

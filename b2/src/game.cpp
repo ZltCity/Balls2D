@@ -44,7 +44,7 @@ Game::~Game()
 
 void Game::update()
 {
-	using namespace render;
+	using namespace gl;
 
 	presentScene();
 }
@@ -74,7 +74,7 @@ void Game::initLogicThread(const glm::ivec2 &surfaceSize, size_t gridWidth, size
 
 void Game::initRender(const glm::ivec2 &surfaceSize)
 {
-	using namespace render;
+	using namespace gl;
 
 	const Shader vertexShader(ShaderType::Vertex, assetManager.readFile("shaders/surface.vs")),
 		fragmentShader(ShaderType::Fragment, assetManager.readFile("shaders/surface.fs"));
@@ -87,7 +87,7 @@ void Game::initRender(const glm::ivec2 &surfaceSize)
 
 void Game::presentScene()
 {
-	using namespace render;
+	using namespace gl;
 
 	const glm::vec3 boxSize(gridSize + glm::ivec3(margin));
 	std::vector<Isosurface::MeshVertex> &localMesh = mesh.get();

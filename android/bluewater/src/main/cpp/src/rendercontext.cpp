@@ -1,7 +1,7 @@
 #include <android_native_app_glue.h>
 
 #include <b2/exception.hpp>
-#include <b2/gapi.hpp>
+#include <b2/gl.hpp>
 #include <b2/logger.hpp>
 
 #include "rendercontext.hpp"
@@ -52,7 +52,7 @@ RenderContext::RenderContext(ANativeWindow *window)
 
 	_assert(eglMakeCurrent(display, surface, surface, context) != EGL_FALSE, 0x5d236635);
 
-	render::_i(glViewport, 0, 0, ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
+	gl::_i(glViewport, 0, 0, ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
 }
 
 void RenderContext::swapBuffers()

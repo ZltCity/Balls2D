@@ -1,6 +1,6 @@
-#include "gapi.hpp"
+#include "gl.hpp"
 
-namespace b2::render
+namespace b2::gl
 {
 
 ClearMode operator|(ClearMode m1, ClearMode m2)
@@ -8,22 +8,22 @@ ClearMode operator|(ClearMode m1, ClearMode m2)
 	return ClearMode(static_cast<int32_t>(m1) | static_cast<int32_t>(m2));
 }
 
-GAPIObject::GAPIObject(GLuint handle, std::function<void(GLuint)> &&destructor)
+GLObject::GLObject(GLuint handle, std::function<void(GLuint)> destructor)
 	: handle(new GLuint(handle), [destructor](GLuint *handle) {
 		  destructor(*handle);
 		  delete handle;
 	  })
 {}
 
-GAPIObject::~GAPIObject()
+GLObject::~GLObject()
 {}
 
-GAPIObject::operator bool() const
+GLObject::operator bool() const
 {
 	return handle != nullptr && *handle != 0;
 }
 
-GLuint GAPIObject::getHandle() const
+GLuint GLObject::getHandle() const
 {
 	return handle == nullptr ? 0 : *handle;
 }
@@ -77,7 +77,7 @@ TextureType Texture::getType() const
 }
 
 Shader::Shader(ShaderType type, const Bytebuffer &buffer)
-	: GAPIObject(create(type, buffer), [](GLuint handle) { glDeleteShader(handle); })
+	: GLObject(create(type, buffer), [](GLuint handle) { glDeleteShader(handle); })
 {}
 
 GLuint Shader::create(ShaderType type, const Bytebuffer &buffer)
@@ -112,7 +112,7 @@ GLuint Shader::create(ShaderType type, const Bytebuffer &buffer)
 }
 
 ShaderProgram::ShaderProgram(const std::vector<Shader> &shaders)
-	: GAPIObject(create(shaders), [](GLuint handle) { glDeleteProgram(handle); })
+	: GLObject(create(shaders), [](GLuint handle) { glDeleteProgram(handle); })
 {}
 
 GLuint ShaderProgram::create(const std::vector<Shader> &shaders)
@@ -344,4 +344,4 @@ int32_t appErrorCode(GLenum error)
 	return 0x0;
 }
 
-} // namespace b2::render
+} // namespace b2::gl

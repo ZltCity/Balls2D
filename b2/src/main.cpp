@@ -1,6 +1,6 @@
 #include <memory>
 
-#include "gapi.hpp"
+#include "gl.hpp"
 #include "logger.hpp"
 #include "platform.hpp"
 
@@ -44,8 +44,8 @@ void entry(std::shared_ptr<Platform> platform)
 			}
 		}
 
-		render::setClearColor({0.45f, 0.6f, 0.35f, 1.0f});
-		render::clear(render::ClearMode::Color);
+		gl::setClearColor({0.45f, 0.6f, 0.35f, 1.0f});
+		gl::clear(gl::ClearMode::Color);
 
 		platform->updateDisplay();
 	}

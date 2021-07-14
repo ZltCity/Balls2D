@@ -5,8 +5,8 @@
 
 #include "assetmanager.hpp"
 #include "camera.hpp"
-#include "gapi.hpp"
 #include "gearbox.hpp"
+#include "gl.hpp"
 #include "isosurface.hpp"
 #include "physics.hpp"
 
@@ -49,8 +49,8 @@ private:
 	std::thread logicThread;
 	std::atomic_bool alive, singleThread;
 
-	render::Buffer surfaceVertices;
-	render::ShaderProgram shaderProgram;
+	gl::Buffer surfaceVertices;
+	gl::ShaderProgram shaderProgram;
 
 	glm::ivec3 gridSize;
 	Camera camera;
