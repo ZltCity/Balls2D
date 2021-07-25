@@ -20,20 +20,20 @@ public:
 
 	AndroidPlatform &operator=(const AndroidPlatform &) = delete;
 
-	std::list<Event> pollEvents();
-	void updateDisplay();
+	void nextTick();
+	Bytebuffer readFile(const std::string &filepath) const;
+
+	void setEventHandler(EventHandler eventHandler);
 
 private:
-	void pushEvent(Event event);
-	std::list<Event> moveEventList();
+	void handleEvent(const Event &event) const;
 
 	static void cmdHandler(android_app *androidApp, int32_t cmd);
 	static int32_t inputHandler(android_app *androidApp, AInputEvent *event);
 
 	android_app *androidApp;
 
-	std::list<Event> eventList;
-	std::mutex eventListLock;
+	EventHandler eventHandler;
 
 	std::unique_ptr<RenderContext> renderContext;
 	SensorManager sensorManager;

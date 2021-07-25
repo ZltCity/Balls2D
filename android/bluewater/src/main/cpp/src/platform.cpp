@@ -19,7 +19,7 @@ AndroidPlatform::AndroidPlatform(android_app *androidApp) : androidApp(androidAp
 	androidApp->onInputEvent = inputHandler;
 }
 
-std::list<Event> AndroidPlatform::pollEvents()
+void AndroidPlatform::nextTick()
 {
 	android_poll_source *source;
 	int32_t events = 0;
@@ -30,44 +30,43 @@ std::list<Event> AndroidPlatform::pollEvents()
 			source->process(androidApp, source);
 
 		if (androidApp->destroyRequested != 0)
-			pushEvent({Event::QuitRequest, true});
+			handleEvent({Event::QuitRequest, true});
 	}
 
-	auto commonEvents = moveEventList(), sensorEvents = sensorManager.pollEvents();
+	for (const Event &event : sensorManager.pollEvents())
+		handleEvent(event);
 
-	if (!sensorEvents.empty())
-		commonEvents.insert(commonEvents.end(), sensorEvents.begin(), sensorEvents.end());
-
-	return commonEvents;
+	if (renderContext != nullptr)
+		renderContext->swapBuffers();
 }
 
-void AndroidPlatform::updateDisplay()
+Bytebuffer AndroidPlatform::readFile(const std::string &filepath) const
 {
-	if (renderContext == nullptr)
+	std::unique_ptr<AAsset, std::function<void(AAsset *)>> asset(
+		AAssetManager_open(androidApp->activity->assetManager, filepath.c_str(), AASSET_MODE_BUFFER),
+		[](AAsset *asset) { AAsset_close(asset); });
+
+	_assert(asset != nullptr, 0x0f77c02e);
+
+	size_t fileLength = AAsset_getLength(asset.get());
+	Bytebuffer buffer(fileLength);
+
+	_assert(AAsset_read(asset.get(), buffer.data(), fileLength) == fileLength, 0x1e49e9a9);
+
+	return buffer;
+}
+
+void AndroidPlatform::setEventHandler(EventHandler eventHandler)
+{
+	this->eventHandler = std::move(eventHandler);
+}
+
+void AndroidPlatform::handleEvent(const Event &event) const
+{
+	if (!eventHandler)
 		return;
 
-	renderContext->swapBuffers();
-}
-
-void AndroidPlatform::pushEvent(Event event)
-{
-	std::lock_guard<std::mutex> lock(eventListLock);
-
-	eventList.push_back(std::move(event));
-}
-
-std::list<Event> AndroidPlatform::moveEventList()
-{
-	std::lock_guard<std::mutex> lock(eventListLock);
-
-	if (eventList.empty())
-		return {};
-
-	auto result = std::move(eventList);
-
-	eventList = std::list<Event>();
-
-	return result;
+	eventHandler(event);
 }
 
 void AndroidPlatform::cmdHandler(android_app *androidApp, int32_t cmd)
@@ -85,10 +84,16 @@ void AndroidPlatform::cmdHandler(android_app *androidApp, int32_t cmd)
 		{
 			self->renderContext = std::make_unique<RenderContext>(androidApp->window);
 
+			self->handleEvent(
+				{Event::WindowCreated,
+				 glm::ivec2 {ANativeWindow_getWidth(androidApp->window), ANativeWindow_getHeight(androidApp->window)}});
+
 			break;
 		}
 		case APP_CMD_TERM_WINDOW:
 		{
+			self->handleEvent({Event::WindowDestroyed, true});
+
 			self->renderContext.reset();
 
 			break;
@@ -123,19 +128,19 @@ int32_t AndroidPlatform::inputHandler(android_app *androidApp, AInputEvent *even
 					{
 						case AMOTION_EVENT_ACTION_MOVE:
 						{
-							self->pushEvent({Touch(Touch::Move, motionPoints())});
+							self->handleEvent(Event(Touch(Touch::Move, motionPoints())));
 
 							break;
 						}
 						case AMOTION_EVENT_ACTION_UP:
 						{
-							self->pushEvent({Touch(Touch::Up, motionPoints())});
+							self->handleEvent(Event(Touch(Touch::Up, motionPoints())));
 
 							break;
 						}
 						case AMOTION_EVENT_ACTION_DOWN:
 						{
-							self->pushEvent({Touch(Touch::Down, motionPoints())});
+							self->handleEvent(Event(Touch(Touch::Down, motionPoints())));
 
 							break;
 						}

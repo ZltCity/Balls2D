@@ -29,16 +29,18 @@ struct Event
 	enum Type
 	{
 		QuitRequest = 0,
+		WindowCreated,
+		WindowDestroyed,
 		TouchEvent,
 		AccelerationEvent
 	};
 
-	Event(Touch touch);
+	explicit Event(Touch touch);
 	template<typename T>
 	Event(Type type, T payload);
 
 	Type type;
-	std::variant<bool, glm::vec3, Touch> payload;
+	std::variant<bool, glm::ivec2, glm::vec3, Touch> payload;
 };
 
 template<typename T>
