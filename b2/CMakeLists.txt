@@ -13,7 +13,6 @@ add_library(
 				src/main.cpp
 				src/physics.cpp
 				src/platform.cpp
-				src/spinlock.cpp
 				src/system.cpp
 				src/test_scene.cpp
 				src/threadpool.cpp
@@ -37,7 +36,6 @@ list(
 								include/logger.hpp
 								include/physics.hpp
 								include/platform.hpp
-								include/spinlock.hpp
 								include/system.hpp
 								include/test_scene.hpp
 								include/threadpool.hpp

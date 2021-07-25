@@ -22,7 +22,7 @@ Grid::Grid(const glm::ivec3 &size) : size(size)
 	const size_t linearSize = size.x * size.y * size.z;
 
 	cells = std::vector<Cell>(linearSize);
-	cellsLocks = std::vector<SpinLock>(linearSize);
+	cellsLocks = std::vector<std::mutex>(linearSize);
 }
 
 Cloud::Cloud(const glm::ivec3 &gridSize, size_t particlesCount, std::function<Particle()> generator)

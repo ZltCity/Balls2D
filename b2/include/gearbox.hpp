@@ -2,8 +2,6 @@
 
 #include <thread>
 
-#include "spinlock.hpp"
-
 namespace b2
 {
 
@@ -22,7 +20,7 @@ public:
 	T &get();
 
 private:
-	SpinLock centerLock;
+	std::mutex centerLock;
 	T left, center;
 	bool swapped;
 };

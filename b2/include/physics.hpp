@@ -6,8 +6,6 @@
 
 #include <glm/glm.hpp>
 
-#include "spinlock.hpp"
-
 namespace b2::physics
 {
 
@@ -35,7 +33,7 @@ public:
 	};
 
 	std::vector<Cell> cells;
-	std::vector<SpinLock> cellsLocks;
+	std::vector<std::mutex> cellsLocks;
 	glm::ivec3 size;
 };
 
