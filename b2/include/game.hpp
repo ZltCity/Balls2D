@@ -3,12 +3,12 @@
 #include <mutex>
 #include <thread>
 
-#include "assetmanager.hpp"
 #include "camera.hpp"
 #include "gearbox.hpp"
 #include "gl.hpp"
 #include "isosurface.hpp"
 #include "physics.hpp"
+#include "platform.hpp"
 
 namespace b2
 {
@@ -16,7 +16,7 @@ namespace b2
 class Game
 {
 public:
-	Game(const system::AssetManager &assetManager, const glm::ivec2 &surfaceSize);
+	Game(std::shared_ptr<Platform> platform, const glm::ivec2 &surfaceSize);
 	Game(const Game &) = delete;
 	~Game();
 
@@ -38,7 +38,7 @@ private:
 
 	static void logicRoutine(Game *self);
 
-	system::AssetManager assetManager;
+	std::shared_ptr<Platform> platform;
 
 	Gearbox<SurfaceMesh> mesh;
 	Gearbox<glm::vec3> acceleration;

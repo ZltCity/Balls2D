@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 add_library(
-	b2 STATIC	src/application.cpp
-				src/assetmanager.cpp
-				src/camera.cpp
+	b2 STATIC	src/camera.cpp
 				src/config.cpp
 				src/event.cpp
 				src/exception.cpp
@@ -27,9 +25,7 @@ target_include_directories(
 )
 
 list(
-	APPEND	B2_PUBLIC_HEADERS	include/application.hpp
-								include/assetmanager.hpp
-								include/bytebuffer.hpp
+	APPEND	B2_PUBLIC_HEADERS	include/bytebuffer.hpp
 								include/camera.hpp
 								include/config.hpp
 								include/event.hpp

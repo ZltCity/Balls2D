@@ -1,6 +1,9 @@
 #pragma once
 
+#include <functional>
+
 #include "event.hpp"
+#include "bytebuffer.hpp"
 
 namespace b2
 {

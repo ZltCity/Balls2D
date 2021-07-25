@@ -16,16 +16,12 @@ namespace b2
 
 const char *const Game::configPath = "configs/game.json";
 
-Game::Game(const system::AssetManager &assetManager, const glm::ivec2 &surfaceSize)
-	: assetManager(assetManager),
-	  acceleration(glm::vec3(0.0f, -9.8f, 0.0f)),
-	  alive(true),
-	  singleThread(true),
-	  projection(1.0f)
+Game::Game(std::shared_ptr<Platform> platform, const glm::ivec2 &surfaceSize)
+	: platform(platform), acceleration(glm::vec3(0.0f, -9.8f, 0.0f)), alive(true), singleThread(true), projection(1.0f)
 {
 	using json = nlohmann::json;
 
-	const Config config(assetManager.readFile(configPath));
+	const Config config(platform->readFile(configPath));
 	const json physicsConfig = config.json.at("physics");
 
 	singleThread.store(config.json.at("singleThread").get<bool>());
@@ -76,8 +72,8 @@ void Game::initRender(const glm::ivec2 &surfaceSize)
 {
 	using namespace gl;
 
-	const Shader vertexShader(ShaderType::Vertex, assetManager.readFile("shaders/surface.vs")),
-		fragmentShader(ShaderType::Fragment, assetManager.readFile("shaders/surface.fs"));
+	const Shader vertexShader(ShaderType::Vertex, platform->readFile("shaders/surface.vs")),
+		fragmentShader(ShaderType::Fragment, platform->readFile("shaders/surface.fs"));
 
 	shaderProgram = ShaderProgram({vertexShader, fragmentShader});
 	projection = camera.getPerspective(75.0f, float(surfaceSize.x) / surfaceSize.y, 1000.f);
