@@ -41,7 +41,8 @@ private:
 	std::shared_ptr<Platform> platform;
 
 	Gearbox<SurfaceMesh> mesh;
-	Gearbox<glm::vec3> acceleration;
+
+	std::atomic<glm::vec3> acceleration;
 
 	physics::Cloud particlesCloud;
 	Isosurface isosurface;

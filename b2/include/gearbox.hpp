@@ -9,56 +9,46 @@ template<typename T>
 class Gearbox
 {
 public:
-	Gearbox(const T &value = T());
+	explicit Gearbox(const T &input = T());
 	Gearbox(const Gearbox &) = delete;
 
 	Gearbox &operator=(const Gearbox &) = delete;
 
-	void swap(T &value);
-	void push(const T &value);
+	void turn(T &input);
 
 	T &get();
 
 private:
-	std::mutex centerLock;
-	T left, center;
-	bool swapped;
+	std::mutex spindleLock;
+	T output, spindle;
+	bool turned;
 };
 
 template<typename T>
-Gearbox<T>::Gearbox(const T &value) : left(value), swapped(false)
+Gearbox<T>::Gearbox(const T &input) : output(input), turned(false)
 {}
 
 template<typename T>
-void Gearbox<T>::swap(T &value)
+void Gearbox<T>::turn(T &input)
 {
-	std::lock_guard lock(centerLock);
+	std::lock_guard lock(spindleLock);
 
-	std::swap(center, value);
-	swapped = true;
-}
-
-template<typename T>
-void Gearbox<T>::push(const T &value)
-{
-	std::lock_guard lock(centerLock);
-
-	center = value;
-	swapped = true;
+	std::swap(spindle, input);
+	turned = true;
 }
 
 template<typename T>
 T &Gearbox<T>::get()
 {
-	std::lock_guard lock(centerLock);
+	std::lock_guard lock(spindleLock);
 
-	if (swapped)
+	if (turned)
 	{
-		std::swap(center, left);
-		swapped = false;
+		std::swap(spindle, output);
+		turned = false;
 	}
 
-	return left;
+	return output;
 }
 
 } // namespace b2

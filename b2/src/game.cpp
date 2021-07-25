@@ -47,7 +47,7 @@ void Game::update()
 
 void Game::onSensorsEvent(const glm::vec3 &acceleration)
 {
-	this->acceleration.push(acceleration);
+	this->acceleration.store(acceleration);
 }
 
 void Game::initLogicThread(const glm::ivec2 &surfaceSize, size_t gridWidth, size_t particlesCount)
@@ -139,10 +139,10 @@ void Game::logicRoutine(Game *self)
 		Timer localTimer;
 		bool singleThread = self->singleThread.load();
 
-		self->particlesCloud.update(self->acceleration.get(), 0.01f, singleThread);
+		self->particlesCloud.update(self->acceleration.load(), 0.01f, singleThread);
 		pTime += localTimer.getDeltaMs();
 
-		self->mesh.swap(self->isosurface.generateMesh(self->particlesCloud.getParticles(), radius, singleThread));
+		self->mesh.turn(self->isosurface.generateMesh(self->particlesCloud.getParticles(), radius, singleThread));
 
 		rTime += localTimer.getDeltaMs();
 
