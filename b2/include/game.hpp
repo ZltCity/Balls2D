@@ -40,12 +40,12 @@ private:
 
 	std::shared_ptr<Platform> platform;
 
-	Gearbox<SurfaceMesh> mesh;
+//	Gearbox<SurfaceMesh> mesh;
 
 	std::atomic<glm::vec3> acceleration;
 
 	physics::Cloud particlesCloud;
-	Isosurface isosurface;
+//	Isosurface isosurface;
 
 	std::thread logicThread;
 	std::atomic_bool alive, singleThread;
@@ -56,6 +56,7 @@ private:
 	glm::ivec3 gridSize;
 	Camera camera;
 	glm::mat4 projection;
+	glm::ivec2 surfaceSize;
 };
 
 } // namespace b2

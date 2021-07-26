@@ -64,7 +64,7 @@ void Game::initLogicThread(const glm::ivec2 &surfaceSize, size_t gridWidth, size
 
 		return physics::Particle(glm::vec3(x(generator), y(generator), z(generator)));
 	});
-	isosurface = Isosurface(gridSize + glm::ivec3(margin));
+	//	isosurface = Isosurface(gridSize + glm::ivec3(margin));
 	logicThread = std::thread(logicRoutine, this);
 }
 
@@ -72,50 +72,50 @@ void Game::initRender(const glm::ivec2 &surfaceSize)
 {
 	using namespace gl;
 
-	const Shader vertexShader(ShaderType::Vertex, platform->readFile("shaders/surface.vs")),
-		fragmentShader(ShaderType::Fragment, platform->readFile("shaders/surface.fs"));
+	const Shader vertexShader(ShaderType::Vertex, platform->readFile("shaders/particle.vs")),
+		fragmentShader(ShaderType::Fragment, platform->readFile("shaders/particle.fs"));
 
 	shaderProgram = ShaderProgram({vertexShader, fragmentShader});
 	projection = camera.getPerspective(75.0f, float(surfaceSize.x) / surfaceSize.y, 1000.f);
 
 	camera.lookAt(glm::vec3(.0f, 0.0f, -50.f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0));
+
+	this->surfaceSize = surfaceSize;
 }
 
 void Game::presentScene()
 {
 	using namespace gl;
 
-	const glm::vec3 boxSize(gridSize + glm::ivec3(margin));
-	std::vector<Isosurface::MeshVertex> &localMesh = mesh.get();
+	const glm::vec3 boxSize(gridSize/* + glm::ivec3(margin)*/);
+	const auto &particles = particlesCloud.getParticles();
 
-	if (localMesh.size() == 0)
-		return;
-
-	if (!surfaceVertices || surfaceVertices.getSize() < localMesh.size() * sizeof(Isosurface::MeshVertex))
+	if (!surfaceVertices || surfaceVertices.getSize() < particles.size() * sizeof(physics::Particle))
 	{
-		surfaceVertices = Buffer(BufferType::Vertex, localMesh);
+		surfaceVertices = Buffer(BufferType::Vertex, particles);
 	}
 	else
 	{
 		surfaceVertices.bind();
-		surfaceVertices.write(0, localMesh);
+		surfaceVertices.write(0, particles);
 	}
 
 	surfaceVertices.bind();
 	setVertexFormat(std::vector<VertexAttrib>(
-		{{3, sizeof(Isosurface::MeshVertex), AttribType::Float},
-		 {3, sizeof(Isosurface::MeshVertex), AttribType::Float}}));
+		{{3, sizeof(physics::Particle), AttribType::Float}, {3, sizeof(physics::Particle), AttribType::Float}}));
 
 	shaderProgram.use();
 
 	Mat4Uniform("in_projection", projection).set(shaderProgram);
 	Mat4Uniform("in_modelview", camera.getView() * glm::translate(glm::mat4(1.f), -boxSize * 0.5f)).set(shaderProgram);
+	Vec2Uniform("in_surface_size", surfaceSize).set(shaderProgram);
+	FloatUniform("in_point_size", 2.0f).set(shaderProgram);
 
 	_i(glEnable, GL_DEPTH_TEST);
 
 	setClearColor({.5f, .6f, .4f, 1.f});
 	clear(ClearMode::Color | ClearMode::Depth);
-	draw(DrawMode::Triangles, localMesh.size());
+	draw(DrawMode::Points, particles.size());
 }
 
 void Game::logicRoutine(Game *self)
@@ -142,7 +142,8 @@ void Game::logicRoutine(Game *self)
 		self->particlesCloud.update(self->acceleration.load(), 0.01f, singleThread);
 		pTime += localTimer.getDeltaMs();
 
-		self->mesh.turn(self->isosurface.generateMesh(self->particlesCloud.getParticles(), radius, singleThread));
+		//		self->mesh.turn(self->isosurface.generateMesh(self->particlesCloud.getParticles(), radius,
+		//singleThread));
 
 		rTime += localTimer.getDeltaMs();
 

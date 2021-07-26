@@ -16,5 +16,5 @@ void main()
 
 	factor = 1.0 - factor;
 
-	out_color = vec4(normalize(vec3(gl_FragCoord.xy - particle_center, -1.0)), factor);
+	out_color = vec4(factor, factor, factor, factor); //vec4(normalize(vec3(gl_FragCoord.xy - particle_center, -1.0)), factor);
 }

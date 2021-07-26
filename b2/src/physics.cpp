@@ -1,6 +1,5 @@
 #include <thread>
 
-#include "logger.hpp"
 #include "physics.hpp"
 #include "threadpool.hpp"
 
