@@ -29,11 +29,16 @@ public:
 	{
 		Cell();
 
-		size_t slots[cellCapacity], count;
+		void reset()
+		{
+			count.store(0);
+		}
+
+		size_t slots[cellCapacity];
+		std::atomic_uint8_t count;
 	};
 
 	std::vector<Cell> cells;
-	std::vector<std::mutex> cellsLocks;
 	glm::ivec3 size;
 };
 

@@ -11,17 +11,14 @@ namespace b2::physics
 Particle::Particle(const glm::vec3 &position) : position(position), delta(0.0f)
 {}
 
-Grid::Cell::Cell() : count(0)
-{
-	std::fill(slots, slots + Grid::cellCapacity, 0);
-}
+Grid::Cell::Cell() : count(0), slots {}
+{}
 
 Grid::Grid(const glm::ivec3 &size) : size(size)
 {
 	const size_t linearSize = size.x * size.y * size.z;
 
 	cells = std::vector<Cell>(linearSize);
-	cellsLocks = std::vector<std::mutex>(linearSize);
 }
 
 Cloud::Cloud(const glm::ivec3 &gridSize, size_t particlesCount, std::function<Particle()> generator)
@@ -84,7 +81,8 @@ void Cloud::moveParticles(const glm::vec3 &acceleration, float dt, bool singleTh
 
 void Cloud::fill(bool singleThread)
 {
-	std::fill(grid.cells.begin(), grid.cells.end(), Grid::Cell());
+	for (auto &cell : grid.cells)
+		cell.reset();
 
 	ThreadPool &threadPool = ThreadPool::getInstance();
 	const size_t workersCount = threadPool.getWorkersCount(), particlesCount = particles.size(),
@@ -97,14 +95,13 @@ void Cloud::fill(bool singleThread)
 		{
 			const glm::ivec3 cellCoord(particles[i].position);
 			const size_t cellIdx = cellCoord.x + cellCoord.y * width + cellCoord.z * square;
-			std::lock_guard lock(grid.cellsLocks[cellIdx]);
 			Grid::Cell &cell = grid.cells[cellIdx];
+			const uint8_t cellFilling = cell.count++;
 
-			if (cell.count >= Grid::cellCapacity)
+			if (cellFilling >= Grid::cellCapacity)
 				continue;
 
-			cell.slots[cell.count] = i;
-			++cell.count;
+			cell.slots[cellFilling] = i;
 		}
 	};
 
