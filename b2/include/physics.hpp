@@ -12,50 +12,46 @@ namespace b2::physics
 struct Particle
 {
 	Particle() = default;
-	Particle(const glm::vec3 &position);
+	explicit Particle(const glm::vec3 &position);
 
 	glm::vec3 position, delta;
 };
 
-class Grid
+class ParticleCloud
 {
 public:
-	Grid() = default;
-	Grid(const glm::ivec3 &size);
+	using Generator = std::function<Particle()>;
 
-	static const size_t cellCapacity = 6;
+	ParticleCloud() = default;
+	ParticleCloud(const glm::ivec3 &gridSize, size_t particlesCount, Generator generator);
+
+	void update(const glm::vec3 &acceleration, float dt, bool singleThread = true);
+
+	[[nodiscard]] glm::ivec3 getGridSize() const;
+	[[nodiscard]] const std::vector<Particle> &getParticles() const;
+
+private:
+	static const size_t solverIterations = 2, cellCapacity = 96;
 
 	struct Cell
 	{
 		Cell();
 
-		void reset()
-		{
-			count.store(0);
-		}
+		void reset();
 
 		size_t slots[cellCapacity];
 		std::atomic_uint8_t count;
 	};
 
-	std::vector<Cell> cells;
-	glm::ivec3 size;
-};
+	struct Grid
+	{
+		Grid() = default;
+		explicit Grid(const glm::ivec3 &size);
 
-class Cloud
-{
-public:
-	Cloud() = default;
-	Cloud(const glm::ivec3 &gridSize, size_t particlesCount, std::function<Particle()> generator);
+		std::vector<Cell> cells;
+		glm::ivec3 size;
+	};
 
-	void update(const glm::vec3 &acceleration, float dt, bool singleThread = true);
-
-	glm::ivec3 getGridSize() const;
-	const std::vector<Particle> &getParticles() const;
-
-	static const int32_t solverIterations = 2;
-
-private:
 	void moveParticles(const glm::vec3 &acceleration, float dt, bool singleThread);
 	void fill(bool singleThread);
 	void resolve(bool singleThread);
@@ -65,6 +61,7 @@ private:
 
 	Grid grid;
 	std::vector<Particle> particles;
+	Generator generator;
 };
 
 } // namespace b2::physics

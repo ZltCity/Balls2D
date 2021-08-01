@@ -57,7 +57,7 @@ void Game::initLogicThread(const glm::ivec2 &surfaceSize, size_t gridWidth, size
 
 	gridSize = glm::ivec3(gridWidth, int32_t(gridWidth * float(surfaceSize.y) / surfaceSize.x), gridWidth);
 
-	particlesCloud = physics::Cloud(gridSize, particlesCount, [this]() -> physics::Particle {
+	particlesCloud = physics::ParticleCloud(gridSize, particlesCount, [this]() -> physics::Particle {
 		std::default_random_engine generator(Timer::getTimestamp());
 		std::uniform_real_distribution<float> x(0.5f, float(gridSize.x) - 0.5f), y(0.5f, float(gridSize.y) - 0.5f),
 			z(0.5f, float(gridSize.z) - 0.5f);

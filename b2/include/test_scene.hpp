@@ -27,7 +27,7 @@ namespace b2
 //	ShaderProgram program;
 //	glm::mat4 model;
 //	Camera camera;
-//	physics::Cloud particles;
+//	physics::ParticleCloud particles;
 //	physics::Grid<physics::Particle> grid;
 // };
 

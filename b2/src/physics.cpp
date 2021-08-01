@@ -1,5 +1,6 @@
 #include <thread>
 
+#include "logger.hpp"
 #include "physics.hpp"
 #include "threadpool.hpp"
 
@@ -11,28 +12,33 @@ namespace b2::physics
 Particle::Particle(const glm::vec3 &position) : position(position), delta(0.0f)
 {}
 
-Grid::Cell::Cell() : count(0), slots {}
+ParticleCloud::Cell::Cell() : count(0), slots {}
 {}
 
-Grid::Grid(const glm::ivec3 &size) : size(size)
+void ParticleCloud::Cell::reset()
+{
+	count.store(0);
+}
+
+ParticleCloud::Grid::Grid(const glm::ivec3 &size) : size(size)
 {
 	const size_t linearSize = size.x * size.y * size.z;
 
 	cells = std::vector<Cell>(linearSize);
 }
 
-Cloud::Cloud(const glm::ivec3 &gridSize, size_t particlesCount, std::function<Particle()> generator)
-	: grid(gridSize), particles(particlesCount)
+ParticleCloud::ParticleCloud(const glm::ivec3 &gridSize, size_t particlesCount, std::function<Particle()> generator)
+	: grid(gridSize), particles(particlesCount), generator(std::move(generator))
 {
-	for (int32_t i = 0; i < particlesCount; ++i)
-		particles[i] = generator();
+	for (size_t i = 0; i < particlesCount; ++i)
+		particles.at(i) = this->generator();
 }
 
-void Cloud::update(const glm::vec3 &acceleration, float dt, bool singleThread)
+void ParticleCloud::update(const glm::vec3 &acceleration, float dt, bool singleThread)
 {
 	moveParticles(acceleration, dt, singleThread);
 
-	for (int32_t it = 0; it < solverIterations; ++it)
+	for (size_t i = 0; i < solverIterations; ++i)
 	{
 		resolveBounds(singleThread);
 		fill(singleThread);
@@ -40,17 +46,17 @@ void Cloud::update(const glm::vec3 &acceleration, float dt, bool singleThread)
 	}
 }
 
-glm::ivec3 Cloud::getGridSize() const
+glm::ivec3 ParticleCloud::getGridSize() const
 {
 	return grid.size;
 }
 
-const std::vector<Particle> &Cloud::getParticles() const
+const std::vector<Particle> &ParticleCloud::getParticles() const
 {
 	return particles;
 }
 
-void Cloud::moveParticles(const glm::vec3 &acceleration, float dt, bool singleThread)
+void ParticleCloud::moveParticles(const glm::vec3 &acceleration, float dt, bool singleThread)
 {
 	ThreadPool &threadPool = ThreadPool::getInstance();
 	const size_t workersCount = threadPool.getWorkersCount(), particlesCount = particles.size(),
@@ -60,7 +66,7 @@ void Cloud::moveParticles(const glm::vec3 &acceleration, float dt, bool singleTh
 					  float dt) {
 		for (size_t i = offset; i < offset + count; ++i)
 		{
-			Particle &particle = particles[i];
+			Particle &particle = particles.at(i);
 
 			particle.delta += acceleration * dt * dt;
 			particle.position += particle.delta;
@@ -71,15 +77,15 @@ void Cloud::moveParticles(const glm::vec3 &acceleration, float dt, bool singleTh
 		routine(particles, acceleration, 0, particlesCount, dt);
 	else
 	{
-		for (int32_t t = 0; t < workersCount; ++t)
-			futures[t] = threadPool.pushTask(routine, std::ref(particles), acceleration, t * batchSize, batchSize, dt);
+		for (size_t i = 0; i < workersCount; ++i)
+			futures[i] = threadPool.pushTask(routine, std::ref(particles), acceleration, i * batchSize, batchSize, dt);
 
 		for (auto &future : futures)
 			future.wait();
 	}
 }
 
-void Cloud::fill(bool singleThread)
+void ParticleCloud::fill(bool singleThread)
 {
 	for (auto &cell : grid.cells)
 		cell.reset();
@@ -88,20 +94,37 @@ void Cloud::fill(bool singleThread)
 	const size_t workersCount = threadPool.getWorkersCount(), particlesCount = particles.size(),
 				 batchSize = particles.size() / workersCount;
 	std::future<void> futures[workersCount];
-	auto routine = [](Grid &grid, std::vector<Particle> &particles, size_t offset, size_t count) {
+	auto routine = [this](Grid &grid, std::vector<Particle> &particles, size_t offset, size_t count) {
 		const int32_t width = grid.size.x, square = width * grid.size.y;
 
 		for (size_t i = offset; i < offset + count; ++i)
 		{
-			const glm::ivec3 cellCoord(particles[i].position);
+			const glm::vec3 &position = particles.at(i).position;
+			const glm::ivec3 cellCoord(position);
 			const size_t cellIdx = cellCoord.x + cellCoord.y * width + cellCoord.z * square;
-			Grid::Cell &cell = grid.cells[cellIdx];
-			const uint8_t cellFilling = cell.count++;
 
-			if (cellFilling >= Grid::cellCapacity)
+			if (cellIdx > grid.cells.size())
+			{
+				crit(
+					"%i, %i, %i - %f, %f, %f", cellCoord.x, cellCoord.y, cellCoord.z, position.x, position.y,
+					position.z);
 				continue;
+			}
 
-			cell.slots[cellFilling] = i;
+			try
+			{
+				Cell &cell = grid.cells.at(cellIdx);
+				const uint8_t cellFilling = cell.count++;
+
+				if (cellFilling >= cellCapacity)
+					continue;
+
+				cell.slots[cellFilling] = i;
+			}
+			catch (const std::exception &ex)
+			{
+				std::exit(-1);
+			}
 		}
 	};
 
@@ -109,25 +132,25 @@ void Cloud::fill(bool singleThread)
 		routine(grid, particles, 0, particlesCount);
 	else
 	{
-		for (int32_t t = 0; t < workersCount; ++t)
-			futures[t] = threadPool.pushTask(routine, std::ref(grid), std::ref(particles), t * batchSize, batchSize);
+		for (size_t i = 0; i < workersCount; ++i)
+			futures[i] = threadPool.pushTask(routine, std::ref(grid), std::ref(particles), i * batchSize, batchSize);
 
 		for (auto &future : futures)
 			future.wait();
 	}
 }
 
-void Cloud::resolve(bool singleThread)
+void ParticleCloud::resolve(bool singleThread)
 {
 	ThreadPool &threadPool = ThreadPool::getInstance();
 	const size_t cellsCount = grid.cells.size(), batchSize = 1024, tasksCount = (cellsCount / batchSize) + 1;
 	std::future<void> futures[tasksCount];
-	auto routine = [](Cloud *self, Grid &grid, std::vector<Particle> &particles, size_t offset, size_t count) {
+	auto routine = [](ParticleCloud *self, Grid &grid, std::vector<Particle> &particles, size_t offset, size_t count) {
 		const int32_t width = grid.size.x, square = width * grid.size.y;
 
 		for (size_t ci1 = offset; ci1 < offset + count; ++ci1)
 		{
-			const Grid::Cell &cell1 = grid.cells[ci1];
+			const Cell &cell1 = grid.cells.at(ci1);
 			const glm::ivec3 cellCoord((ci1 % square) % width, (ci1 % square) / width, ci1 / square);
 
 			for (int32_t si1 = 0; si1 < cell1.count; ++si1)
@@ -142,7 +165,7 @@ void Cloud::resolve(bool singleThread)
 								continue;
 
 							const size_t ci2 = x + y * width + z * square;
-							const Grid::Cell &cell2 = grid.cells[ci2];
+							const Cell &cell2 = grid.cells.at(ci2);
 
 							for (int32_t si2 = 0; si2 < cell2.count; ++si2)
 							{
@@ -151,7 +174,7 @@ void Cloud::resolve(bool singleThread)
 								if (pi1 == pi2)
 									continue;
 
-								self->resolveParticles(particles[pi1], particles[pi2]);
+								self->resolveParticles(particles.at(pi1), particles.at(pi2));
 							}
 						}
 					}
@@ -177,26 +200,23 @@ void Cloud::resolve(bool singleThread)
 	}
 }
 
-void Cloud::resolveParticles(Particle &p1, Particle &p2)
+void ParticleCloud::resolveParticles(Particle &p1, Particle &p2)
 {
 	glm::vec3 pv = p1.position - p2.position;
-	const float distance = glm::length(pv), bounce = .5f;
+	const float distance = glm::length(pv), bounce = 0.5f;
 
-	if (distance == 0.f)
-		return;
-
-	if (distance < 1.f)
+	if (distance < 1.0f)
 	{
-		float depth = (1.f - distance) * .5f;
+		float depth = (1.0f - distance) * 0.5f;
 
 		pv = glm::normalize(pv);
 
 		pushParticle(p1, pv * depth);
 		pushParticle(p2, pv * -depth);
 
-		float exchange = ((1.f + bounce) * glm::dot(p1.delta - p2.delta, pv)) * .5f;
+		float exchange = ((1.0f + bounce) * glm::dot(p1.delta - p2.delta, pv)) * 0.5f;
 
-		if (exchange > 1.f)
+		if (exchange > 1.0f)
 		{
 			p1.delta += pv * exchange;
 			p2.delta -= pv * exchange;
@@ -204,12 +224,12 @@ void Cloud::resolveParticles(Particle &p1, Particle &p2)
 	}
 }
 
-void Cloud::resolveBounds(bool singleThread)
+void ParticleCloud::resolveBounds(bool singleThread)
 {
 	auto collidePlane = [this](Particle &particle, const glm::vec3 &o, const glm::vec3 &normal) {
 		const float depth = glm::dot(particle.position - o, normal);
 
-		if (depth < 0.f)
+		if (depth < 0.0f)
 		{
 			pushParticle(particle, -normal * depth);
 			particle.delta -= 0.5f * depth * normal;
@@ -220,19 +240,19 @@ void Cloud::resolveBounds(bool singleThread)
 	for (Particle &particle : particles)
 	{
 		const std::tuple<glm::vec3, glm::vec3> planes[] = {
-			{glm::vec3(.5f, 0.f, 0.f), glm::vec3(1.f, 0.f, 0.f)},
-			{glm::vec3(boxSize.x - .5f, 0.f, 0.f), glm::vec3(-1.f, 0.f, 0.f)},
-			{glm::vec3(0.f, .5f, 0.f), glm::vec3(0.f, 1.f, 0.f)},
-			{glm::vec3(0.f, boxSize.y - .5f, 0.f), glm::vec3(0.f, -1.f, 0.f)},
-			{glm::vec3(0.f, 0.f, .5f), glm::vec3(0.f, 0.f, 1.f)},
-			{glm::vec3(0.f, 0.f, boxSize.z - .5f), glm::vec3(0.f, 0.f, -1.f)}};
+			{glm::vec3(0.5f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+			{glm::vec3(boxSize.x - 0.5f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f)},
+			{glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
+			{glm::vec3(0.0f, boxSize.y - 0.5f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
+			{glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f)},
+			{glm::vec3(0.0f, 0.0f, boxSize.z - 0.5f), glm::vec3(0.0f, 0.0f, -1.0f)}};
 
 		for (auto [o, normal] : planes)
 			collidePlane(particle, o, normal);
 	}
 }
 
-void Cloud::pushParticle(Particle &p, const glm::vec3 &v)
+void ParticleCloud::pushParticle(Particle &p, const glm::vec3 &v)
 {
 	p.position += v;
 	p.delta += v;

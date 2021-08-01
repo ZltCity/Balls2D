@@ -44,7 +44,7 @@ private:
 
 	std::atomic<glm::vec3> acceleration;
 
-	physics::Cloud particlesCloud;
+	physics::ParticleCloud particlesCloud;
 //	Isosurface isosurface;
 
 	std::thread logicThread;
