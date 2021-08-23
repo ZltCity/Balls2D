@@ -1,5 +1,8 @@
 #include <thread>
 
+#include <glm/gtc/random.hpp>
+
+#include "exception.hpp"
 #include "logger.hpp"
 #include "physics.hpp"
 #include "threadpool.hpp"
@@ -31,7 +34,7 @@ ParticleCloud::ParticleCloud(const glm::ivec3 &gridSize, size_t particlesCount, 
 	: grid(gridSize), particles(particlesCount), generator(std::move(generator))
 {
 	for (size_t i = 0; i < particlesCount; ++i)
-		particles.at(i) = this->generator();
+		particles[i] = this->generator();
 }
 
 void ParticleCloud::update(const glm::vec3 &acceleration, float dt, bool singleThread)
@@ -66,7 +69,7 @@ void ParticleCloud::moveParticles(const glm::vec3 &acceleration, float dt, bool 
 					  float dt) {
 		for (size_t i = offset; i < offset + count; ++i)
 		{
-			Particle &particle = particles.at(i);
+			Particle &particle = particles[i];
 
 			particle.delta += acceleration * dt * dt;
 			particle.position += particle.delta;
@@ -99,32 +102,18 @@ void ParticleCloud::fill(bool singleThread)
 
 		for (size_t i = offset; i < offset + count; ++i)
 		{
-			const glm::vec3 &position = particles.at(i).position;
+			const glm::vec3 &position = particles[i].position;
 			const glm::ivec3 cellCoord(position);
 			const size_t cellIdx = cellCoord.x + cellCoord.y * width + cellCoord.z * square;
 
-			if (cellIdx > grid.cells.size())
-			{
-				crit(
-					"%i, %i, %i - %f, %f, %f", cellCoord.x, cellCoord.y, cellCoord.z, position.x, position.y,
-					position.z);
-				continue;
-			}
+			_assert(cellIdx < grid.cells.size(), 0x3554cfd3);
 
-			try
-			{
-				Cell &cell = grid.cells.at(cellIdx);
-				const uint8_t cellFilling = cell.count++;
+			Cell &cell = grid.cells[cellIdx];
+			const uint8_t cellFilling = cell.count++;
 
-				if (cellFilling >= cellCapacity)
-					continue;
+			_assert(cellFilling < cellCapacity, 0x4f62c1fa);
 
-				cell.slots[cellFilling] = i;
-			}
-			catch (const std::exception &ex)
-			{
-				std::exit(-1);
-			}
+			cell.slots[cellFilling] = i;
 		}
 	};
 
@@ -150,7 +139,7 @@ void ParticleCloud::resolve(bool singleThread)
 
 		for (size_t ci1 = offset; ci1 < offset + count; ++ci1)
 		{
-			const Cell &cell1 = grid.cells.at(ci1);
+			const Cell &cell1 = grid.cells[ci1];
 			const glm::ivec3 cellCoord((ci1 % square) % width, (ci1 % square) / width, ci1 / square);
 
 			for (int32_t si1 = 0; si1 < cell1.count; ++si1)
@@ -165,7 +154,7 @@ void ParticleCloud::resolve(bool singleThread)
 								continue;
 
 							const size_t ci2 = x + y * width + z * square;
-							const Cell &cell2 = grid.cells.at(ci2);
+							const Cell &cell2 = grid.cells[ci2];
 
 							for (int32_t si2 = 0; si2 < cell2.count; ++si2)
 							{
@@ -174,7 +163,7 @@ void ParticleCloud::resolve(bool singleThread)
 								if (pi1 == pi2)
 									continue;
 
-								self->resolveParticles(particles.at(pi1), particles.at(pi2));
+								self->resolveParticles(particles[pi1], particles[pi2]);
 							}
 						}
 					}
@@ -203,13 +192,16 @@ void ParticleCloud::resolve(bool singleThread)
 void ParticleCloud::resolveParticles(Particle &p1, Particle &p2)
 {
 	glm::vec3 pv = p1.position - p2.position;
-	const float distance = glm::length(pv), bounce = 0.5f;
+	float distance = glm::length(pv), bounce = 0.5f;
 
 	if (distance < 1.0f)
 	{
 		float depth = (1.0f - distance) * 0.5f;
 
-		pv = glm::normalize(pv);
+		if (distance == 0.0f)
+			pv = glm::sphericalRand(1.0f);
+		else
+			pv /= distance;
 
 		pushParticle(p1, pv * depth);
 		pushParticle(p2, pv * -depth);
@@ -227,12 +219,14 @@ void ParticleCloud::resolveParticles(Particle &p1, Particle &p2)
 void ParticleCloud::resolveBounds(bool singleThread)
 {
 	auto collidePlane = [this](Particle &particle, const glm::vec3 &o, const glm::vec3 &normal) {
-		const float depth = glm::dot(particle.position - o, normal);
+		const float distance = glm::dot(particle.position - o, normal);
 
-		if (depth < 0.0f)
+		if (distance <= 0.5f)
 		{
-			pushParticle(particle, -normal * depth);
-			particle.delta -= 0.5f * depth * normal;
+			const float depth = 0.5f - distance;
+
+			pushParticle(particle, normal * depth);
+			particle.delta += 0.5f * depth * normal;
 		}
 	};
 	const glm::vec3 boxSize(grid.size);
@@ -240,14 +234,14 @@ void ParticleCloud::resolveBounds(bool singleThread)
 	for (Particle &particle : particles)
 	{
 		const std::tuple<glm::vec3, glm::vec3> planes[] = {
-			{glm::vec3(0.5f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
-			{glm::vec3(boxSize.x - 0.5f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f)},
-			{glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
-			{glm::vec3(0.0f, boxSize.y - 0.5f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
-			{glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f)},
-			{glm::vec3(0.0f, 0.0f, boxSize.z - 0.5f), glm::vec3(0.0f, 0.0f, -1.0f)}};
+			{glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+			{glm::vec3(boxSize.x, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f)},
+			{glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
+			{glm::vec3(0.0f, boxSize.y, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
+			{glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
+			{glm::vec3(0.0f, 0.0f, boxSize.z), glm::vec3(0.0f, 0.0f, -1.0f)}};
 
-		for (auto [o, normal] : planes)
+		for (const auto &[o, normal] : planes)
 			collidePlane(particle, o, normal);
 	}
 }

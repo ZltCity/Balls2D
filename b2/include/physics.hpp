@@ -31,7 +31,7 @@ public:
 	[[nodiscard]] const std::vector<Particle> &getParticles() const;
 
 private:
-	static const size_t solverIterations = 2, cellCapacity = 96;
+	static const size_t solverIterations = 2, cellCapacity = 16;
 
 	struct Cell
 	{
