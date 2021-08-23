@@ -2,15 +2,23 @@
 
 #include "game.hpp"
 #include "logger.hpp"
+#include "platform/eventloop.hpp"
+#include "platform/io.hpp"
+
+//#include <fenv.h>
 
 namespace b2
 {
 
-void entry(std::shared_ptr<Platform> platform)
+void main(std::shared_ptr<platform::EventLoop> eventLoop, std::shared_ptr<platform::IO> io)
 {
+	using namespace platform;
+
+	//	feenableexcept(FE_DIVBYZERO);
+
 	bool quitRequest = false;
 	std::unique_ptr<Game> game;
-	auto eventHandler = [&quitRequest, &game, platform](const Event &event) {
+	auto eventHandler = [&quitRequest, &game, eventLoop, io](const Event &event) {
 		switch (event.type)
 		{
 			case Event::TouchEvent:
@@ -40,7 +48,7 @@ void entry(std::shared_ptr<Platform> platform)
 			}
 			case Event::WindowCreated:
 			{
-				game = std::make_unique<Game>(platform, std::get<glm::ivec2>(event.payload));
+				game = std::make_unique<Game>(std::get<std::shared_ptr<RenderContext>>(event.payload), io);
 
 				break;
 			}
@@ -60,14 +68,14 @@ void entry(std::shared_ptr<Platform> platform)
 		}
 	};
 
-	platform->setEventHandler(eventHandler);
+	eventLoop->setEventHandler(eventHandler);
 
 	while (!quitRequest)
 	{
 		if (game != nullptr)
 			game->update();
 
-		platform->nextTick();
+		eventLoop->nextTick();
 	}
 }
 

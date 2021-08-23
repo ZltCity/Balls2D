@@ -16,15 +16,22 @@ namespace b2
 
 const char *const Game::configPath = "configs/game.json";
 
-Game::Game(std::shared_ptr<Platform> platform, const glm::ivec2 &surfaceSize)
-	: platform(platform), acceleration(glm::vec3(0.0f, -9.8f, 0.0f)), alive(true), singleThread(true), projection(1.0f)
+Game::Game(std::shared_ptr<platform::RenderContext> renderContext, std::shared_ptr<platform::IO> io)
+	: renderContext(renderContext),
+	  io(io),
+	  acceleration(glm::vec3(0.0f, -9.8f, 0.0f)),
+	  alive(true),
+	  singleThread(true),
+	  projection(1.0f)
 {
 	using json = nlohmann::json;
 
-	const Config config(platform->readFile(configPath));
+	const Config config(io->readFile(configPath));
 	const json physicsConfig = config.json.at("physics");
 
 	singleThread.store(config.json.at("singleThread").get<bool>());
+
+	const auto surfaceSize = renderContext->getSurfaceSize();
 
 	initLogicThread(
 		surfaceSize, physicsConfig.at("gridSize").at("width").get<size_t>(),
@@ -72,8 +79,8 @@ void Game::initRender(const glm::ivec2 &surfaceSize)
 {
 	using namespace gl;
 
-	const Shader vertexShader(ShaderType::Vertex, platform->readFile("shaders/particle.vs")),
-		fragmentShader(ShaderType::Fragment, platform->readFile("shaders/particle.fs"));
+	const Shader vertexShader(ShaderType::Vertex, io->readFile("shaders/particle.vs")),
+		fragmentShader(ShaderType::Fragment, io->readFile("shaders/particle.fs"));
 
 	shaderProgram = ShaderProgram({vertexShader, fragmentShader});
 	projection = camera.getPerspective(75.0f, float(surfaceSize.x) / surfaceSize.y, 1000.f);
@@ -116,9 +123,12 @@ void Game::presentScene()
 	setClearColor({.5f, .6f, .4f, 1.f});
 	clear(ClearMode::Color | ClearMode::Depth);
 	draw(DrawMode::Points, particles.size());
+
+	renderContext->swapBuffers();
 }
 
 void Game::logicRoutine(Game *self)
+try
 {
 	size_t frames = 0;
 	float elapsed = 0.0f, pTime = 0.0f, rTime = 0.0f;
@@ -158,6 +168,10 @@ void Game::logicRoutine(Game *self)
 			elapsed = pTime = rTime = 0.0f;
 		}
 	}
+}
+catch (const std::exception &ex)
+{
+	crit("Error occurred: %s", ex.what());
 }
 
 } // namespace b2

@@ -5,10 +5,13 @@
 
 #include <android/sensor.h>
 
-#include <b2/event.hpp>
+#include <b2/exception.hpp>
+#include <b2/platform/eventloop.hpp>
 
 namespace b2::android
 {
+
+using namespace platform;
 
 class SensorManager
 {

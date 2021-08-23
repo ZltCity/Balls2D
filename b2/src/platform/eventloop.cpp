@@ -1,6 +1,6 @@
-#include "event.hpp"
+#include "platform/eventloop.hpp"
 
-namespace b2
+namespace b2::platform
 {
 
 Touch::Touch(Type type, std::vector<glm::vec2> points) : type(type), points(std::move(points))
@@ -9,4 +9,7 @@ Touch::Touch(Type type, std::vector<glm::vec2> points) : type(type), points(std:
 Event::Event(Touch touch) : type(Event::TouchEvent), payload(std::move(touch))
 {}
 
-} // namespace b2
+EventLoop::~EventLoop()
+{}
+
+} // namespace b2::platform

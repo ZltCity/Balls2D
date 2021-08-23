@@ -1,10 +1,6 @@
 #pragma once
 
-#include <mutex>
-
 #include <android_native_app_glue.h>
-
-#include <b2/platform.hpp>
 
 #include "rendercontext.hpp"
 #include "sensormanager.hpp"
@@ -12,18 +8,18 @@
 namespace b2::android
 {
 
-class AndroidPlatform : public Platform
+using namespace platform;
+
+class AndroidEventLoop : public EventLoop
 {
 public:
-	AndroidPlatform(android_app *androidApp);
-	AndroidPlatform(const AndroidPlatform &) = delete;
+	AndroidEventLoop(android_app *androidApp);
+	AndroidEventLoop(const AndroidEventLoop &) = delete;
 
-	AndroidPlatform &operator=(const AndroidPlatform &) = delete;
+	AndroidEventLoop &operator=(const AndroidEventLoop &) = delete;
 
-	void nextTick();
-	Bytebuffer readFile(const std::string &filepath) const;
-
-	void setEventHandler(EventHandler eventHandler);
+	void nextTick() final;
+	void setEventHandler(EventHandler eventHandler) final;
 
 private:
 	void handleEvent(const Event &event) const;
@@ -34,8 +30,6 @@ private:
 	android_app *androidApp;
 
 	EventHandler eventHandler;
-
-	std::unique_ptr<RenderContext> renderContext;
 	SensorManager sensorManager;
 };
 

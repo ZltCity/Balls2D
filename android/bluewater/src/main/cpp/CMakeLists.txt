@@ -23,9 +23,11 @@ add_library(
 )
 
 add_library(
-	bluewater	SHARED	src/platform.cpp
-						src/sensormanager.cpp
+	bluewater	SHARED	src/eventloop.cpp
+						src/io.cpp
+						src/main.cpp
 						src/rendercontext.cpp
+						src/sensormanager.cpp
 )
 
 target_link_libraries(

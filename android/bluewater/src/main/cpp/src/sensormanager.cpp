@@ -1,5 +1,3 @@
-#include <b2/exception.hpp>
-
 #include "sensormanager.hpp"
 
 namespace b2::android

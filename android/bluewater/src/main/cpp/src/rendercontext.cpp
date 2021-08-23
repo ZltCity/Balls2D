@@ -1,5 +1,3 @@
-#include <android_native_app_glue.h>
-
 #include <b2/exception.hpp>
 #include <b2/gl.hpp>
 #include <b2/logger.hpp>
@@ -9,7 +7,7 @@
 namespace b2::android
 {
 
-RenderContext::RenderContext(ANativeWindow *window)
+AndroidRenderContext::AndroidRenderContext(ANativeWindow *window) : window(window)
 {
 	eglVersion = {0, 0};
 
@@ -55,9 +53,14 @@ RenderContext::RenderContext(ANativeWindow *window)
 	gl::_i(glViewport, 0, 0, ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
 }
 
-void RenderContext::swapBuffers()
+void AndroidRenderContext::swapBuffers()
 {
 	eglSwapBuffers(eglDisplay.get(), eglSurface.get());
+}
+
+glm::ivec2 AndroidRenderContext::getSurfaceSize() const
+{
+	return {ANativeWindow_getWidth(window), ANativeWindow_getHeight(window)};
 }
 
 } // namespace b2::android

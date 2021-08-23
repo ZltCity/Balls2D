@@ -1,25 +1,16 @@
-#include <b2/bytebuffer.hpp>
-#include <b2/exception.hpp>
-#include <b2/logger.hpp>
+#include "eventloop.hpp"
 
-#include "platform.hpp"
-
-namespace b2
+namespace b2::android
 {
 
-void entry(std::shared_ptr<Platform>);
-
-namespace android
-{
-
-AndroidPlatform::AndroidPlatform(android_app *androidApp) : androidApp(androidApp)
+AndroidEventLoop::AndroidEventLoop(android_app *androidApp) : androidApp(androidApp)
 {
 	androidApp->userData = this;
 	androidApp->onAppCmd = cmdHandler;
 	androidApp->onInputEvent = inputHandler;
 }
 
-void AndroidPlatform::nextTick()
+void AndroidEventLoop::nextTick()
 {
 	android_poll_source *source;
 	int32_t events = 0;
@@ -36,32 +27,17 @@ void AndroidPlatform::nextTick()
 	for (const Event &event : sensorManager.pollEvents())
 		handleEvent(event);
 
-	if (renderContext != nullptr)
-		renderContext->swapBuffers();
+	//
+	//	if (renderContext != nullptr)
+	//		renderContext->swapBuffers();
 }
 
-Bytebuffer AndroidPlatform::readFile(const std::string &filepath) const
-{
-	std::unique_ptr<AAsset, std::function<void(AAsset *)>> asset(
-		AAssetManager_open(androidApp->activity->assetManager, filepath.c_str(), AASSET_MODE_BUFFER),
-		[](AAsset *asset) { AAsset_close(asset); });
-
-	_assert(asset != nullptr, 0x0f77c02e);
-
-	size_t fileLength = AAsset_getLength(asset.get());
-	Bytebuffer buffer(fileLength);
-
-	_assert(AAsset_read(asset.get(), buffer.data(), fileLength) == fileLength, 0x1e49e9a9);
-
-	return buffer;
-}
-
-void AndroidPlatform::setEventHandler(EventHandler eventHandler)
+void AndroidEventLoop::setEventHandler(EventHandler eventHandler)
 {
 	this->eventHandler = std::move(eventHandler);
 }
 
-void AndroidPlatform::handleEvent(const Event &event) const
+void AndroidEventLoop::handleEvent(const Event &event) const
 {
 	if (!eventHandler)
 		return;
@@ -69,9 +45,9 @@ void AndroidPlatform::handleEvent(const Event &event) const
 	eventHandler(event);
 }
 
-void AndroidPlatform::cmdHandler(android_app *androidApp, int32_t cmd)
+void AndroidEventLoop::cmdHandler(android_app *androidApp, int32_t cmd)
 {
-	AndroidPlatform *self = reinterpret_cast<AndroidPlatform *>(androidApp->userData);
+	AndroidEventLoop *self = reinterpret_cast<AndroidEventLoop *>(androidApp->userData);
 
 	switch (cmd)
 	{
@@ -82,11 +58,7 @@ void AndroidPlatform::cmdHandler(android_app *androidApp, int32_t cmd)
 		case APP_CMD_DESTROY: break;
 		case APP_CMD_INIT_WINDOW:
 		{
-			self->renderContext = std::make_unique<RenderContext>(androidApp->window);
-
-			self->handleEvent(
-				{Event::WindowCreated,
-				 glm::ivec2 {ANativeWindow_getWidth(androidApp->window), ANativeWindow_getHeight(androidApp->window)}});
+			self->handleEvent({Event::WindowCreated, std::make_shared<AndroidRenderContext>(androidApp->window)});
 
 			break;
 		}
@@ -94,14 +66,12 @@ void AndroidPlatform::cmdHandler(android_app *androidApp, int32_t cmd)
 		{
 			self->handleEvent({Event::WindowDestroyed, true});
 
-			self->renderContext.reset();
-
 			break;
 		}
 	}
 }
 
-int32_t AndroidPlatform::inputHandler(android_app *androidApp, AInputEvent *event)
+int32_t AndroidEventLoop::inputHandler(android_app *androidApp, AInputEvent *event)
 {
 	auto motionPoints = [event]() -> std::vector<glm::vec2> {
 		std::vector<glm::vec2> points;
@@ -112,7 +82,7 @@ int32_t AndroidPlatform::inputHandler(android_app *androidApp, AInputEvent *even
 		return points;
 	};
 
-	AndroidPlatform *self = reinterpret_cast<AndroidPlatform *>(androidApp->userData);
+	AndroidEventLoop *self = reinterpret_cast<AndroidEventLoop *>(androidApp->userData);
 	int32_t eventType = AInputEvent_getType(event);
 
 	switch (eventType)
@@ -156,16 +126,4 @@ int32_t AndroidPlatform::inputHandler(android_app *androidApp, AInputEvent *even
 	return 0;
 }
 
-} // namespace android
-
-} // namespace b2
-
-void android_main(android_app *androidApp)
-try
-{
-	b2::entry(std::make_shared<b2::android::AndroidPlatform>(androidApp));
-}
-catch (const std::exception &ex)
-{
-	throw;
-}
+} // namespace b2::android

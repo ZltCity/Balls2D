@@ -4,19 +4,26 @@
 #include <memory>
 
 #include <EGL/egl.h>
+#include <android_native_app_glue.h>
+
+#include <b2/platform/rendercontext.hpp>
 
 namespace b2::android
 {
 
-class RenderContext
+using namespace platform;
+
+class AndroidRenderContext : public RenderContext
 {
 public:
-	RenderContext(ANativeWindow *window);
-	RenderContext(const RenderContext &) = delete;
+	AndroidRenderContext(ANativeWindow *window);
+	AndroidRenderContext(const AndroidRenderContext &) = delete;
 
-	RenderContext &operator=(const RenderContext &) = delete;
+	AndroidRenderContext &operator=(const AndroidRenderContext &) = delete;
 
-	void swapBuffers();
+	void swapBuffers() final;
+
+	glm::ivec2 getSurfaceSize() const final;
 
 private:
 	struct
@@ -26,6 +33,7 @@ private:
 
 	using EglPtr = std::unique_ptr<void, std::function<void(void *)>>;
 
+	ANativeWindow *window;
 	EglPtr eglDisplay, eglSurface, eglContext;
 };
 

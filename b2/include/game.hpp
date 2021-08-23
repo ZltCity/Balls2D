@@ -8,7 +8,9 @@
 #include "gl.hpp"
 #include "isosurface.hpp"
 #include "physics.hpp"
-#include "platform.hpp"
+#include "platform/eventloop.hpp"
+#include "platform/io.hpp"
+#include "platform/rendercontext.hpp"
 
 namespace b2
 {
@@ -16,7 +18,7 @@ namespace b2
 class Game
 {
 public:
-	Game(std::shared_ptr<Platform> platform, const glm::ivec2 &surfaceSize);
+	Game(std::shared_ptr<platform::RenderContext> renderContext, std::shared_ptr<platform::IO> io);
 	Game(const Game &) = delete;
 	~Game();
 
@@ -38,14 +40,15 @@ private:
 
 	static void logicRoutine(Game *self);
 
-	std::shared_ptr<Platform> platform;
+	std::shared_ptr<platform::RenderContext> renderContext;
+	std::shared_ptr<platform::IO> io;
 
-//	Gearbox<SurfaceMesh> mesh;
+	//	Gearbox<SurfaceMesh> mesh;
 
 	std::atomic<glm::vec3> acceleration;
 
 	physics::ParticleCloud particlesCloud;
-//	Isosurface isosurface;
+	//	Isosurface isosurface;
 
 	std::thread logicThread;
 	std::atomic_bool alive, singleThread;
