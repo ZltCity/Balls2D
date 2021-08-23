@@ -32,11 +32,13 @@ add_subdirectory(b2)
 add_subdirectory(contrib/format)
 add_subdirectory(contrib/glm)
 add_subdirectory(contrib/json)
+add_subdirectory(contrib/sdl)
 
 add_dependencies(
 	b2	format
 		glm
 		json
+		sdl
 )
 
 if (CMAKE_SYSTEM_NAME MATCHES Android)
