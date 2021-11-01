@@ -19,13 +19,10 @@ DesktopRenderContext::DesktopRenderContext(std::shared_ptr<SDL_Window> window) :
 		throw std::runtime_error("Unable to create OpenGL context.");
 
 	SDL_GL_MakeCurrent(this->window.get(), glContext.get());
-
-	std::cout << "DesktopRenderContext()" << std::endl;
 }
 
 DesktopRenderContext::~DesktopRenderContext()
 {
-	std::cout << "~DesktopRenderContext()" << std::endl;
 }
 
 void DesktopRenderContext::swapBuffers()

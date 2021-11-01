@@ -20,10 +20,7 @@ int main(int argc, const char **argv)
 	std::unique_ptr<SDL_Window, void (*)(SDL_Window *)> window(
 		SDL_CreateWindow(
 			"An SDL2 window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 900, 900, SDL_WINDOW_OPENGL),
-		[](SDL_Window *window) {
-			SDL_DestroyWindow(window);
-			std::cout << "Window deleter" << std::endl;
-		});
+		[](SDL_Window *window) { SDL_DestroyWindow(window); });
 
 	if (window == nullptr)
 	{

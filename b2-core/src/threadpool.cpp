@@ -36,8 +36,6 @@ void ThreadPool::stop()
 
 	for (ThreadPtr &thread : workers)
 		thread->join();
-
-	std::cout << "Thread pool has been stopped." << std::endl;
 }
 
 ThreadPool &ThreadPool::getInstance()

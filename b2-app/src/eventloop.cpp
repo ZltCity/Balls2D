@@ -9,14 +9,10 @@ namespace b2::desktop
 
 DesktopEventLoop::DesktopEventLoop(std::unique_ptr<SDL_Window, void (*)(SDL_Window *)> window)
 	: window(std::move(window)), angle(0.0f)
-{
-	std::cout << "DesktopEventLoop()" << std::endl;
-}
+{}
 
 DesktopEventLoop::~DesktopEventLoop()
-{
-	std::cout << "~DesktopEventLoop()" << std::endl;
-}
+{}
 
 void DesktopEventLoop::nextTick()
 {
@@ -75,4 +71,4 @@ void DesktopEventLoop::handleEvent(const platform::Event &event) const
 	eventHandler(event);
 }
 
-} // namespace b2-core::b2-app
+} // namespace b2::desktop
