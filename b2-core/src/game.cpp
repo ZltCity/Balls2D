@@ -172,6 +172,7 @@ try
 catch (const std::exception &ex)
 {
 	crit("Error occurred: %s", ex.what());
+	std::terminate();
 }
 
 } // namespace b2-core

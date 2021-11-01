@@ -29,7 +29,8 @@ static const std::map<int32_t, std::string> errTable = {
 	{0x636e76a1, std::string("GL_INVALID_VALUE.")},
 	{0x02f3f490, std::string("GL_INVALID_OPERATION.")},
 	{0x8e699b5d, std::string("GL_OUT_OF_MEMORY.")},
-	{0xd78eead8, std::string("Invalid config value.")}};
+	{0xd78eead8, std::string("Invalid config value.")},
+	{0x4f62c1fa, std::string("Cell capacity exceeded.")}};
 
 Exception::Exception(int32_t code, const char *brief) : runtime_error(brief), code(code)
 {}
