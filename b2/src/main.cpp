@@ -18,7 +18,7 @@ void main(std::shared_ptr<platform::EventLoop> eventLoop, std::shared_ptr<platfo
 
 	bool quitRequest = false;
 	std::unique_ptr<Game> game;
-	auto eventHandler = [&quitRequest, &game, eventLoop, io](const Event &event) {
+	auto eventHandler = [&quitRequest, &game, io](const Event &event) {
 		switch (event.type)
 		{
 			case Event::TouchEvent:

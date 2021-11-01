@@ -10,7 +10,7 @@
 #include "isosurface.hpp"
 #include "logger.hpp"
 #include "timer.hpp"
-
+#include <iostream>
 namespace b2
 {
 
@@ -43,6 +43,7 @@ Game::~Game()
 {
 	alive.store(false);
 	logicThread.join();
+	std::cout << "~Game()" << std::endl;
 }
 
 void Game::update()
@@ -168,6 +169,7 @@ try
 			elapsed = pTime = rTime = 0.0f;
 		}
 	}
+	std::cout << "Logic routine exit." << std::endl;
 }
 catch (const std::exception &ex)
 {

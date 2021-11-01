@@ -1,8 +1,11 @@
 #pragma once
 
+#include <functional>
+#include <memory>
+#include <string>
+
 #include <GLES3/gl3.h>
 #include <glm/glm.hpp>
-#include <string>
 
 #include "bytebuffer.hpp"
 #include "exception.hpp"

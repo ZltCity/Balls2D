@@ -1,6 +1,7 @@
 #include "threadpool.hpp"
 #include "exception.hpp"
 #include "logger.hpp"
+#include <iostream>
 
 namespace b2
 {
@@ -17,15 +18,26 @@ ThreadPool::ThreadPool() : workers(std::thread::hardware_concurrency()), alive(t
 
 ThreadPool::~ThreadPool()
 {
-	alive.store(false);
-
-	for (ThreadPtr &thread : workers)
-		thread->join();
+	stop();
 }
 
 size_t ThreadPool::getWorkersCount() const
 {
 	return workers.size();
+}
+
+void ThreadPool::stop()
+{
+	if (!alive.load())
+		return;
+
+	alive.store(false);
+	alarm.notify_all();
+
+	for (ThreadPtr &thread : workers)
+		thread->join();
+
+	std::cout << "Thread pool has been stopped." << std::endl;
 }
 
 ThreadPool &ThreadPool::getInstance()

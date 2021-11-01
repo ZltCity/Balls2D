@@ -8,5 +8,5 @@
 	"render": {
 		"mode": "surface"
 	},
-	"singleThread": false
+	"singleThread": true
 }

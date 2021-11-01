@@ -21,6 +21,7 @@ public:
 	auto pushTask(Task task, Arguments... arguments) -> std::future<std::invoke_result_t<Task, Arguments...>>;
 
 	size_t getWorkersCount() const;
+	void stop();
 
 	static ThreadPool &getInstance();
 

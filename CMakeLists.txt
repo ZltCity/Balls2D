@@ -4,11 +4,14 @@ project(BlueWater2)
 
 include(ExternalProject)
 
+set(CMAKE_CXX_STANDARD 20)
+
 # CMake arguments for external projects.
 list(
 	APPEND	CONTRIB_CMAKE_ARGS	-DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
 								-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
-								-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+								-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+								-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
 								-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
 								-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/contrib
 )
@@ -24,11 +27,16 @@ if (CMAKE_SYSTEM_NAME MATCHES Android)
 endif()
 
 include_directories(
-	${CMAKE_SOURCE_DIR}/install/contrib/include
+	${CMAKE_INSTALL_PREFIX}/contrib/include
 	${ANDROID_NDK}/sources/android/native_app_glue
+)
+link_directories(
+	${CMAKE_INSTALL_PREFIX}/lib
+	${CMAKE_INSTALL_PREFIX}/contrib/lib
 )
 
 add_subdirectory(b2)
+add_subdirectory(desktop)
 add_subdirectory(contrib/format)
 add_subdirectory(contrib/glm)
 add_subdirectory(contrib/json)
@@ -39,6 +47,9 @@ add_dependencies(
 		glm
 		json
 		sdl
+)
+add_dependencies(
+	bluewater	b2
 )
 
 if (CMAKE_SYSTEM_NAME MATCHES Android)

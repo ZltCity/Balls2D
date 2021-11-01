@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "../bytebuffer.hpp"
 
 namespace b2::platform
