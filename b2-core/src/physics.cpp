@@ -12,7 +12,7 @@
 namespace b2::physics
 {
 
-Particle::Particle(const glm::vec3 &position) : position(position), delta(0.0f)
+Particle::Particle(const glm::vec3 &position) : position(position), delta(0.0f), active(true)
 {}
 
 ParticleCloud::Cell::Cell() : count(0), slots {}
@@ -102,11 +102,16 @@ void ParticleCloud::fill(bool singleThread)
 
 		for (size_t i = offset; i < offset + count; ++i)
 		{
-			const glm::vec3 &position = particles[i].position;
+			auto &particle = particles[i];
+			const glm::vec3 &position = particle.position;
 			const glm::ivec3 cellCoord(position);
 			const size_t cellIdx = cellCoord.x + cellCoord.y * width + cellCoord.z * square;
 
-			_assert(cellIdx < grid.cells.size(), 0x3554cfd3);
+			if (cellIdx >= grid.cells.size())
+				particle.active = false;
+
+			if (!particle.active)
+				continue;
 
 			Cell &cell = grid.cells[cellIdx];
 			const uint8_t cellFilling = cell.count++;

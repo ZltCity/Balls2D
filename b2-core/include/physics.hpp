@@ -15,6 +15,7 @@ struct Particle
 	explicit Particle(const glm::vec3 &position);
 
 	glm::vec3 position, delta;
+	bool active;
 };
 
 class ParticleCloud
