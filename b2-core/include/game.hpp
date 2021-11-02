@@ -3,14 +3,12 @@
 #include <mutex>
 #include <thread>
 
+#include "application.hpp"
 #include "camera.hpp"
 #include "gearbox.hpp"
 #include "gl.hpp"
 #include "isosurface.hpp"
 #include "physics.hpp"
-#include "platform/eventloop.hpp"
-#include "platform/io.hpp"
-#include "platform/rendercontext.hpp"
 
 namespace b2
 {
@@ -18,7 +16,7 @@ namespace b2
 class Game
 {
 public:
-	Game(std::shared_ptr<platform::RenderContext> renderContext, std::shared_ptr<platform::IO> io);
+	Game(std::shared_ptr<Application> application);
 	Game(const Game &) = delete;
 	~Game();
 
@@ -40,8 +38,7 @@ private:
 
 	static void logicRoutine(Game *self);
 
-	std::shared_ptr<platform::RenderContext> renderContext;
-	std::shared_ptr<platform::IO> io;
+	std::shared_ptr<Application> application;
 
 	//	Gearbox<SurfaceMesh> mesh;
 
@@ -62,4 +59,4 @@ private:
 	glm::ivec2 surfaceSize;
 };
 
-} // namespace b2-core
+} // namespace b2

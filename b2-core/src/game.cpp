@@ -16,9 +16,8 @@ namespace b2
 
 const char *const Game::configPath = "configs/game.json";
 
-Game::Game(std::shared_ptr<platform::RenderContext> renderContext, std::shared_ptr<platform::IO> io)
-	: renderContext(renderContext),
-	  io(io),
+Game::Game(std::shared_ptr<Application> application)
+	: application(application),
 	  acceleration(glm::vec3(0.0f, -9.8f, 0.0f)),
 	  alive(true),
 	  singleThread(true),
@@ -26,12 +25,12 @@ Game::Game(std::shared_ptr<platform::RenderContext> renderContext, std::shared_p
 {
 	using json = nlohmann::json;
 
-	const Config config(io->readFile(configPath));
+	const Config config(application->readFile(configPath));
 	const json physicsConfig = config.json.at("physics");
 
 	singleThread.store(config.json.at("singleThread").get<bool>());
 
-	const auto surfaceSize = renderContext->getSurfaceSize();
+	const auto surfaceSize = application->getWindowSize();
 
 	initLogicThread(
 		surfaceSize, physicsConfig.at("gridSize").at("width").get<size_t>(),
@@ -79,13 +78,13 @@ void Game::initRender(const glm::ivec2 &surfaceSize)
 {
 	using namespace gl;
 
-	const Shader vertexShader(ShaderType::Vertex, io->readFile("shaders/particle.vs")),
-		fragmentShader(ShaderType::Fragment, io->readFile("shaders/particle.fs"));
+	const Shader vertexShader(ShaderType::Vertex, application->readFile("shaders/particle.vs")),
+		fragmentShader(ShaderType::Fragment, application->readFile("shaders/particle.fs"));
 
 	shaderProgram = ShaderProgram({vertexShader, fragmentShader});
 	projection = camera.getPerspective(75.0f, float(surfaceSize.x) / surfaceSize.y, 1000.f);
 
-	camera.lookAt(glm::vec3(.0f, 0.0f, -50.f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0));
+	camera.lookAt(glm::vec3(.0f, 0.0f, -30.f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0));
 
 	this->surfaceSize = surfaceSize;
 }
@@ -94,7 +93,7 @@ void Game::presentScene()
 {
 	using namespace gl;
 
-	const glm::vec3 boxSize(gridSize/* + glm::ivec3(margin)*/);
+	const glm::vec3 boxSize(gridSize /* + glm::ivec3(margin)*/);
 	const auto &particles = particlesCloud.getParticles();
 
 	if (!surfaceVertices || surfaceVertices.getSize() < particles.size() * sizeof(physics::Particle))
@@ -124,7 +123,7 @@ void Game::presentScene()
 	clear(ClearMode::Color | ClearMode::Depth);
 	draw(DrawMode::Points, particles.size());
 
-	renderContext->swapBuffers();
+	application->swapBuffers();
 }
 
 void Game::logicRoutine(Game *self)
@@ -153,7 +152,7 @@ try
 		pTime += localTimer.getDeltaMs();
 
 		//		self->mesh.turn(self->isosurface.generateMesh(self->particlesCloud.getParticles(), radius,
-		//singleThread));
+		// singleThread));
 
 		rTime += localTimer.getDeltaMs();
 
@@ -167,6 +166,16 @@ try
 			frames = 0;
 			elapsed = pTime = rTime = 0.0f;
 		}
+
+		//	ToDo: remove it!
+		static float angle = 0.0f;
+		static Timer timer;
+		auto gravity = glm::vec4 {0.0f, -9.81f, 0.0f, 0.0f};
+		auto transform = glm::rotate(glm::mat4 {1}, angle, glm::vec3 {0.0f, 0.0f, 1.0f});
+
+		gravity = gravity * transform;
+		angle += timer.getDeltaMs() * 0.001f;
+		self->acceleration = gravity;
 	}
 }
 catch (const std::exception &ex)
@@ -175,4 +184,4 @@ catch (const std::exception &ex)
 	std::terminate();
 }
 
-} // namespace b2-core
+} // namespace b2

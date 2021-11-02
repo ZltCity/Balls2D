@@ -17,6 +17,8 @@ static const std::map<int32_t, std::string> errTable = {
 	{0xcc5b7924, std::string("Unable to create sensor event queue.")},
 	{0xae3cf11b, std::string("Could not enable accelerometer.")},
 	{0x8ea6aefc, std::string("Unable to get display connection.")},
+	{0xe18e3ae1, std::string("Unable to create window.")},
+	{0xd6a07fa8, std::string("Unable to create rendering context.")},
 	{0x0ba4af75, std::string("Unable to initialize display connection.")},
 	{0xf7669c12, std::string("Unable to choose EGL config.")},
 	{0x238112b7, std::string("There is no suitable EGL config.")},

@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 add_library(b2-core STATIC
-	src/platform/eventloop.cpp
-	src/platform/io.cpp
-	src/platform/rendercontext.cpp
+	src/application.cpp
 	src/camera.cpp
 	src/config.cpp
 	src/exception.cpp
@@ -15,7 +13,7 @@ add_library(b2-core STATIC
 	src/main.cpp
 	src/physics.cpp
 	src/threadpool.cpp
-	src/timer.cpp)
+	src/timer.cpp include/application.hpp src/application.cpp)
 
 target_include_directories(b2-core PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/include)
