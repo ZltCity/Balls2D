@@ -3,7 +3,8 @@
 #include <mutex>
 #include <thread>
 
-#include "application.hpp"
+#include <b2/application.hpp>
+
 #include "camera.hpp"
 #include "gearbox.hpp"
 #include "gl.hpp"

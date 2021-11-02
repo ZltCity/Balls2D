@@ -1,8 +1,9 @@
 #include <memory>
 
-#include <application.hpp>
-#include <game.hpp>
-#include <logger.hpp>
+#include <b2/application.hpp>
+
+#include "game.hpp"
+#include "logger.hpp"
 
 namespace b2
 {

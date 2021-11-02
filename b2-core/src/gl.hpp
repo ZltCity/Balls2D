@@ -6,9 +6,8 @@
 
 #include <GLES3/gl3.h>
 #include <glm/glm.hpp>
-
-#include "bytebuffer.hpp"
-#include "exception.hpp"
+#include <b2/bytebuffer.hpp>
+#include <b2/exception.hpp>
 
 namespace b2::gl
 {

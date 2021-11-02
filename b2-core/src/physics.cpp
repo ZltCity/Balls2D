@@ -1,8 +1,8 @@
 #include <thread>
 
 #include <glm/gtc/random.hpp>
+#include <b2/exception.hpp>
 
-#include "exception.hpp"
 #include "logger.hpp"
 #include "physics.hpp"
 #include "threadpool.hpp"

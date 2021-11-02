@@ -1,7 +1,7 @@
 #include <map>
 #include <string>
 
-#include "exception.hpp"
+#include <b2/exception.hpp>
 
 namespace b2
 {

@@ -5,7 +5,7 @@
 
 #include <android/sensor.h>
 
-#include <exception.hpp>
+#include <b2/exception.hpp>
 #include <platform/eventloop.hpp>
 
 namespace b2::android

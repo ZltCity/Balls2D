@@ -1,16 +1,16 @@
 #include <random>
 
+#include <b2/bytebuffer.hpp>
+#include <b2/exception.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <nlohmann/json.hpp>
 
-#include "bytebuffer.hpp"
 #include "config.hpp"
-#include "exception.hpp"
 #include "game.hpp"
 #include "isosurface.hpp"
 #include "logger.hpp"
 #include "timer.hpp"
-#include <iostream>
+
 namespace b2
 {
 

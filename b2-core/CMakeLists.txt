@@ -13,7 +13,7 @@ add_library(b2-core STATIC
 	src/main.cpp
 	src/physics.cpp
 	src/threadpool.cpp
-	src/timer.cpp include/application.hpp src/application.cpp)
+	src/timer.cpp)
 
 target_include_directories(b2-core PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/include)

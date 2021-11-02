@@ -1,4 +1,4 @@
-#include <exception.hpp>
+#include <b2/exception.hpp>
 
 #include "io.hpp"
 

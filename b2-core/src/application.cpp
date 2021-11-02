@@ -1,4 +1,4 @@
-#include <application.hpp>
+#include <b2/application.hpp>
 
 namespace b2
 {

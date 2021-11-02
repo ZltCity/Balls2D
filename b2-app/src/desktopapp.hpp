@@ -2,7 +2,7 @@
 
 #include <SDL.h>
 
-#include <application.hpp>
+#include <b2/application.hpp>
 
 namespace b2::desktop
 {

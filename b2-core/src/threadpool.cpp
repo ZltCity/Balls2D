@@ -1,7 +1,7 @@
+#include <b2/exception.hpp>
+
 #include "threadpool.hpp"
-#include "exception.hpp"
 #include "logger.hpp"
-#include <iostream>
 
 namespace b2
 {

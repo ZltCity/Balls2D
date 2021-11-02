@@ -1,8 +1,7 @@
 #include <fstream>
 
-#include <exception.hpp>
+#include <b2/exception.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <timer.hpp>
 
 #include "desktopapp.hpp"
 
@@ -14,7 +13,7 @@ DesktopApplication::DesktopApplication() : firstRun(true)
 	SDL_Init(SDL_INIT_EVERYTHING);
 
 	window.reset(
-		SDL_CreateWindow("BlueWater 2", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL),
+		SDL_CreateWindow("BlueWater 2", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 900, 900, SDL_WINDOW_OPENGL),
 		[](SDL_Window *window) { SDL_DestroyWindow(window); });
 
 	_assert(window != nullptr, 0xe18e3ae1);

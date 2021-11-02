@@ -1,8 +1,7 @@
 #pragma once
 
 #include <nlohmann/json.hpp>
-
-#include "bytebuffer.hpp"
+#include <b2/bytebuffer.hpp>
 
 namespace b2
 {

@@ -1,6 +1,6 @@
-#include <exception.hpp>
-#include <gl.hpp>
-#include <logger.hpp>
+#include <b2/exception.hpp>
+#include <b2/gl.hpp>
+#include <b2/logger.hpp>
 
 #include "rendercontext.hpp"
 
