@@ -10,6 +10,7 @@
 #include "gl.hpp"
 #include "isosurface.hpp"
 #include "physics.hpp"
+#include "timer.hpp"
 
 namespace b2
 {
@@ -19,7 +20,6 @@ class Game
 public:
 	Game(std::shared_ptr<Application> application);
 	Game(const Game &) = delete;
-	~Game();
 
 	Game &operator=(const Game &) = delete;
 
@@ -33,23 +33,19 @@ public:
 private:
 	using SurfaceMesh = std::vector<Isosurface::MeshVertex>;
 
-	void initLogicThread(const glm::ivec2 &surfaceSize, size_t gridWidth, size_t particlesCount);
+	void initLogic(const glm::ivec2 &surfaceSize, size_t gridWidth, size_t particlesCount);
 	void initRender(const glm::ivec2 &surfaceSize);
+	void updatePhysics();
 	void presentScene();
 
-	static void logicRoutine(Game *self);
-
 	std::shared_ptr<Application> application;
-
-	//	Gearbox<SurfaceMesh> mesh;
 
 	std::atomic<glm::vec3> acceleration;
 
 	physics::ParticleCloud particlesCloud;
 	//	Isosurface isosurface;
 
-	std::thread logicThread;
-	std::atomic_bool alive, singleThread;
+	std::atomic_bool singleThread;
 
 	gl::Buffer surfaceVertices;
 	gl::ShaderProgram shaderProgram;
@@ -58,6 +54,8 @@ private:
 	Camera camera;
 	glm::mat4 projection;
 	glm::ivec2 surfaceSize;
+	Timer globalTimer;
+	float elapsed;
 };
 
 } // namespace b2

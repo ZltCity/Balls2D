@@ -9,7 +9,6 @@
 #include "game.hpp"
 #include "isosurface.hpp"
 #include "logger.hpp"
-#include "timer.hpp"
 
 namespace b2
 {
@@ -19,9 +18,9 @@ const char *const Game::configPath = "configs/game.json";
 Game::Game(std::shared_ptr<Application> application)
 	: application(application),
 	  acceleration(glm::vec3(0.0f, -9.8f, 0.0f)),
-	  alive(true),
 	  singleThread(true),
-	  projection(1.0f)
+	  projection(1.0f),
+	  elapsed(0.0f)
 {
 	using json = nlohmann::json;
 
@@ -32,23 +31,36 @@ Game::Game(std::shared_ptr<Application> application)
 
 	const auto surfaceSize = application->getWindowSize();
 
-	initLogicThread(
+	initLogic(
 		surfaceSize, physicsConfig.at("gridSize").at("width").get<size_t>(),
 		physicsConfig.at("particlesCount").get<size_t>());
 	initRender(surfaceSize);
-}
-
-Game::~Game()
-{
-	alive.store(false);
-	logicThread.join();
 }
 
 void Game::update()
 {
 	using namespace gl;
 
+	size_t frames = 0;
+	float pTime = 0.0f, rTime = 0.0f;
+	Timer localTimer;
+
+	updatePhysics();
+	pTime += localTimer.getDeltaMs();
+
 	presentScene();
+	rTime += localTimer.getDeltaMs();
+
+	++frames;
+	elapsed += globalTimer.getDeltaMs();
+
+	if (elapsed >= 1000.0f)
+	{
+		info("Physics: %f, Render: %f", pTime / float(frames), rTime / float(frames));
+
+		frames = 0;
+		elapsed = pTime = rTime = 0.0f;
+	}
 }
 
 void Game::onSensorsEvent(const glm::vec3 &acceleration)
@@ -56,7 +68,7 @@ void Game::onSensorsEvent(const glm::vec3 &acceleration)
 	this->acceleration.store(acceleration);
 }
 
-void Game::initLogicThread(const glm::ivec2 &surfaceSize, size_t gridWidth, size_t particlesCount)
+void Game::initLogic(const glm::ivec2 &surfaceSize, size_t gridWidth, size_t particlesCount)
 {
 	_assert(gridWidth > 0, 0xd78eead8);
 	_assert(particlesCount > 0, 0xd78eead8);
@@ -71,7 +83,6 @@ void Game::initLogicThread(const glm::ivec2 &surfaceSize, size_t gridWidth, size
 		return physics::Particle(glm::vec3(x(generator), y(generator), z(generator)));
 	});
 	//	isosurface = Isosurface(gridSize + glm::ivec3(margin));
-	logicThread = std::thread(logicRoutine, this);
 }
 
 void Game::initRender(const glm::ivec2 &surfaceSize)
@@ -87,6 +98,27 @@ void Game::initRender(const glm::ivec2 &surfaceSize)
 	camera.lookAt(glm::vec3(.0f, 0.0f, -30.f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0));
 
 	this->surfaceSize = surfaceSize;
+}
+
+void Game::updatePhysics()
+try
+{
+	particlesCloud.update(acceleration.load(), 0.01f, singleThread);
+
+	//	ToDo: remove it!
+	static float angle = 0.0f;
+	static Timer timer;
+	auto gravity = glm::vec4 {0.0f, -9.81f, 0.0f, 0.0f};
+	auto transform = glm::rotate(glm::mat4 {1}, angle, glm::vec3 {0.0f, 0.0f, 1.0f});
+
+	gravity = gravity * transform;
+	angle += timer.getDeltaMs() * 0.001f;
+	acceleration = gravity;
+}
+catch (const std::exception &ex)
+{
+	crit("Error occurred: %s", ex.what());
+	std::terminate();
 }
 
 void Game::presentScene()
@@ -124,64 +156,6 @@ void Game::presentScene()
 	draw(DrawMode::Points, particles.size());
 
 	application->swapBuffers();
-}
-
-void Game::logicRoutine(Game *self)
-try
-{
-	size_t frames = 0;
-	float elapsed = 0.0f, pTime = 0.0f, rTime = 0.0f;
-	Timer globalTimer;
-
-	while (self->alive.load())
-	{
-		/*
-			Physics config:
-			- particles count	:		4000
-			- grid width		:		24
-			- physics iters.	:		3
-			- solver iters.		:		2
-
-			ST: 9 ms
-			MT: 7 ms
-		*/
-		Timer localTimer;
-		bool singleThread = self->singleThread.load();
-
-		self->particlesCloud.update(self->acceleration.load(), 0.01f, singleThread);
-		pTime += localTimer.getDeltaMs();
-
-		//		self->mesh.turn(self->isosurface.generateMesh(self->particlesCloud.getParticles(), radius,
-		// singleThread));
-
-		rTime += localTimer.getDeltaMs();
-
-		++frames;
-		elapsed += globalTimer.getDeltaMs();
-
-		if (elapsed >= 1000.0f)
-		{
-			info("Physics: %f, Render: %f", pTime / frames, rTime / frames);
-
-			frames = 0;
-			elapsed = pTime = rTime = 0.0f;
-		}
-
-		//	ToDo: remove it!
-		static float angle = 0.0f;
-		static Timer timer;
-		auto gravity = glm::vec4 {0.0f, -9.81f, 0.0f, 0.0f};
-		auto transform = glm::rotate(glm::mat4 {1}, angle, glm::vec3 {0.0f, 0.0f, 1.0f});
-
-		gravity = gravity * transform;
-		angle += timer.getDeltaMs() * 0.001f;
-		self->acceleration = gravity;
-	}
-}
-catch (const std::exception &ex)
-{
-	crit("Error occurred: %s", ex.what());
-	std::terminate();
 }
 
 } // namespace b2
