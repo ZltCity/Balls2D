@@ -38,29 +38,36 @@ DesktopApplication::~DesktopApplication()
 	SDL_Quit();
 }
 
-Event DesktopApplication::pollEvent() const
+std::vector<Event> DesktopApplication::pollEvents() const
 {
+	std::vector<Event> events;
+
 	if (firstRun)
 	{
 		firstRun = false;
-		return {Event::WindowCreated, true};
+		events.emplace_back(Event::WindowCreated, true);
 	}
 
 	SDL_Event event;
 
-	SDL_PollEvent(&event);
-
-	if (event.type == SDL_WINDOWEVENT)
+	while (SDL_PollEvent(&event) != 0)
 	{
-		switch (event.window.event)
+		if (event.type == SDL_WINDOWEVENT)
 		{
-			case SDL_WINDOWEVENT_CLOSE: return {Event::WindowDestroyed, true};
+			switch (event.window.event)
+			{
+				case SDL_WINDOWEVENT_CLOSE:
+				{
+					events.emplace_back(Event::WindowDestroyed, true);
+					break;
+				};
+			}
 		}
+		else if (event.type == SDL_QUIT)
+			events.emplace_back(Event::QuitRequest, true);
 	}
-	else if (event.type == SDL_QUIT)
-		return {Event::QuitRequest, true};
 
-	return {Event::Empty, None {}};
+	return events;
 }
 
 Bytebuffer DesktopApplication::readFile(const std::string &filepath) const

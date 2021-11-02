@@ -15,9 +15,7 @@ void main(std::shared_ptr<Application> application)
 
 	while (!quitRequest)
 	{
-		Event event {};
-
-		while ((event = application->pollEvent()).type != Event::Empty)
+		for (const auto &event : application->pollEvents())
 		{
 			switch (event.type)
 			{
@@ -60,7 +58,7 @@ void main(std::shared_ptr<Application> application)
 				case Event::QuitRequest:
 				{
 					quitRequest = true;
-					return;
+					break;
 				}
 			}
 		}

@@ -59,7 +59,7 @@ public:
 
 	Application &operator=(const Application &) = delete;
 
-	[[nodiscard]] virtual Event pollEvent() const = 0;
+	[[nodiscard]] virtual std::vector<Event> pollEvents() const = 0;
 
 	[[nodiscard]] virtual Bytebuffer readFile(const std::string &filepath) const = 0;
 

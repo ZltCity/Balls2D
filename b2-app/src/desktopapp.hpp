@@ -16,7 +16,7 @@ public:
 
 	DesktopApplication &operator=(const DesktopApplication &) = delete;
 
-	[[nodiscard]] Event pollEvent() const final;
+	[[nodiscard]] std::vector<Event> pollEvents() const final;
 
 	[[nodiscard]] Bytebuffer readFile(const std::string &filepath) const final;
 
