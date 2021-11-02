@@ -29,6 +29,9 @@ Game::Game(std::shared_ptr<Application> application)
 
 	singleThread.store(config.json.at("singleThread").get<bool>());
 
+	if (!singleThread)
+		threadPool = std::make_shared<ThreadPool>();
+
 	const auto surfaceSize = application->getWindowSize();
 
 	initLogic(
@@ -75,13 +78,16 @@ void Game::initLogic(const glm::ivec2 &surfaceSize, size_t gridWidth, size_t par
 
 	gridSize = glm::ivec3(gridWidth, int32_t(gridWidth * float(surfaceSize.y) / surfaceSize.x), gridWidth);
 
-	particlesCloud = physics::ParticleCloud(gridSize, particlesCount, [this]() -> physics::Particle {
-		std::default_random_engine generator(Timer::getTimestamp());
-		std::uniform_real_distribution<float> x(0.5f, float(gridSize.x) - 0.5f), y(0.5f, float(gridSize.y) - 0.5f),
-			z(0.5f, float(gridSize.z) - 0.5f);
+	particlesCloud = physics::ParticleCloud(
+		gridSize, particlesCount,
+		[this]() -> physics::Particle {
+			std::default_random_engine generator(Timer::getTimestamp());
+			std::uniform_real_distribution<float> x(0.5f, float(gridSize.x) - 0.5f), y(0.5f, float(gridSize.y) - 0.5f),
+				z(0.5f, float(gridSize.z) - 0.5f);
 
-		return physics::Particle(glm::vec3(x(generator), y(generator), z(generator)));
-	});
+			return physics::Particle(glm::vec3(x(generator), y(generator), z(generator)));
+		},
+		threadPool);
 	//	isosurface = Isosurface(gridSize + glm::ivec3(margin));
 }
 
@@ -95,7 +101,7 @@ void Game::initRender(const glm::ivec2 &surfaceSize)
 	shaderProgram = ShaderProgram({vertexShader, fragmentShader});
 	projection = camera.getPerspective(75.0f, float(surfaceSize.x) / surfaceSize.y, 1000.f);
 
-	camera.lookAt(glm::vec3(.0f, 0.0f, -30.f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0));
+	camera.lookAt(glm::vec3(.0f, 0.0f, -100.f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0));
 
 	this->surfaceSize = surfaceSize;
 }
@@ -112,7 +118,7 @@ try
 	auto transform = glm::rotate(glm::mat4 {1}, angle, glm::vec3 {0.0f, 0.0f, 1.0f});
 
 	gravity = gravity * transform;
-	angle += timer.getDeltaMs() * 0.001f;
+	angle += timer.getDeltaMs() * 0.0001f;
 	acceleration = gravity;
 }
 catch (const std::exception &ex)

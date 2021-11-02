@@ -6,6 +6,8 @@
 
 #include <glm/glm.hpp>
 
+#include "threadpool.hpp"
+
 namespace b2::physics
 {
 
@@ -24,7 +26,8 @@ public:
 	using Generator = std::function<Particle()>;
 
 	ParticleCloud() = default;
-	ParticleCloud(const glm::ivec3 &gridSize, size_t particlesCount, Generator generator);
+	ParticleCloud(
+		const glm::ivec3 &gridSize, size_t particlesCount, Generator generator, std::shared_ptr<ThreadPool> threadPool);
 
 	void update(const glm::vec3 &acceleration, float dt, bool singleThread = true);
 
@@ -63,6 +66,7 @@ private:
 	Grid grid;
 	std::vector<Particle> particles;
 	Generator generator;
+	std::shared_ptr<ThreadPool> threadPool;
 };
 
-} // namespace b2-core::physics
+} // namespace b2::physics

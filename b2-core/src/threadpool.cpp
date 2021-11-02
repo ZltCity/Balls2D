@@ -1,14 +1,14 @@
 #include <b2/exception.hpp>
 
-#include "threadpool.hpp"
 #include "logger.hpp"
+#include "threadpool.hpp"
 
 namespace b2
 {
 
-ThreadPool::ThreadPool() : workers(std::thread::hardware_concurrency()), alive(true)
+ThreadPool::ThreadPool(size_t workerCount) : workers(workerCount), alarm(false), alive(true)
 {
-	_assert(workers.size(), 0x620a358f);
+	_assert(!workers.empty(), 0x620a358f);
 
 	info("Threads count: %d", workers.size());
 
@@ -18,7 +18,18 @@ ThreadPool::ThreadPool() : workers(std::thread::hardware_concurrency()), alive(t
 
 ThreadPool::~ThreadPool()
 {
-	stop();
+	assert(alive.load());
+
+	{
+		std::lock_guard lock(aliveLock);
+
+		alive = false;
+		alarm.test_and_set();
+		alarm.notify_all();
+	}
+
+	for (ThreadPtr &thread : workers)
+		thread->join();
 }
 
 size_t ThreadPool::getWorkersCount() const
@@ -26,42 +37,40 @@ size_t ThreadPool::getWorkersCount() const
 	return workers.size();
 }
 
-void ThreadPool::stop()
+std::function<void()> ThreadPool::popTask()
 {
-	if (!alive.load())
-		return;
+	std::lock_guard lock(tasksLock);
 
-	alive.store(false);
-	alarm.notify_all();
+	if (tasks.empty())
+		return {};
 
-	for (ThreadPtr &thread : workers)
-		thread->join();
-}
+	auto task = std::move(tasks.front());
 
-ThreadPool &ThreadPool::getInstance()
-{
-	static ThreadPool instance;
+	tasks.pop();
 
-	return instance;
+	return task;
 }
 
 void ThreadPool::workerRoutine(ThreadPool *self)
 {
-	while (self->alive.load())
+	while (true)
 	{
-		std::unique_lock lock(self->tasksLock);
+		auto task = self->popTask();
 
-		if (self->tasks.size() > 0)
-		{
-			auto task = std::move(self->tasks.front());
-
-			self->tasks.pop();
-			lock.unlock();
+		if (task)
 			task();
-		}
 		else
-			self->alarm.wait(lock);
+		{
+			self->alarm.wait(false);
+
+			std::lock_guard lock(self->aliveLock);
+
+			if (!self->alive)
+				return;
+
+			self->alarm.clear();
+		}
 	}
 }
 
-} // namespace b2-core
+} // namespace b2

@@ -18,7 +18,7 @@ public:
 	};
 
 	Isosurface() = default;
-	Isosurface(const glm::ivec3 &fieldSize);
+	Isosurface(const glm::ivec3 &fieldSize, std::shared_ptr<ThreadPool> threadPool);
 
 	template<typename Particle>
 	std::vector<MeshVertex> &generateMesh(
@@ -42,6 +42,7 @@ private:
 	std::vector<MeshVertex> mesh;
 	std::vector<SpacePoint> field;
 	glm::ivec3 fieldSize;
+	std::shared_ptr<ThreadPool> threadPool;
 };
 
 template<typename Particle>
@@ -147,8 +148,7 @@ void Isosurface::generateScalarField(const std::vector<Particle> &particles, uin
 {
 	std::fill(field.begin(), field.end(), SpacePoint({glm::vec3(0.0f), 0.0f}));
 
-	ThreadPool &threadPool = ThreadPool::getInstance();
-	const size_t particlesCount = particles.size(), workersCount = threadPool.getWorkersCount(),
+	const size_t particlesCount = particles.size(), workersCount = threadPool->getWorkersCount(),
 				 batchSize = particlesCount / workersCount;
 	std::future<void> futures[workersCount];
 	auto routine = [this, radius](const std::vector<Particle> &particles, size_t offset, size_t count) {
@@ -180,11 +180,11 @@ void Isosurface::generateScalarField(const std::vector<Particle> &particles, uin
 	else
 	{
 		for (int32_t t = 0; t < workersCount; ++t)
-			futures[t] = threadPool.pushTask(routine, std::ref(particles), t * batchSize, batchSize);
+			futures[t] = threadPool->pushTask(routine, std::ref(particles), t * batchSize, batchSize);
 
 		for (auto &future : futures)
 			future.wait();
 	}
 }
 
-} // namespace b2-core
+} // namespace b2

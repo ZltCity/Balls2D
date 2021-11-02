@@ -1,7 +1,7 @@
 #include <thread>
 
-#include <glm/gtc/random.hpp>
 #include <b2/exception.hpp>
+#include <glm/gtc/random.hpp>
 
 #include "logger.hpp"
 #include "physics.hpp"
@@ -30,8 +30,10 @@ ParticleCloud::Grid::Grid(const glm::ivec3 &size) : size(size)
 	cells = std::vector<Cell>(linearSize);
 }
 
-ParticleCloud::ParticleCloud(const glm::ivec3 &gridSize, size_t particlesCount, std::function<Particle()> generator)
-	: grid(gridSize), particles(particlesCount), generator(std::move(generator))
+ParticleCloud::ParticleCloud(
+	const glm::ivec3 &gridSize, size_t particlesCount, std::function<Particle()> generator,
+	std::shared_ptr<ThreadPool> threadPool)
+	: grid(gridSize), particles(particlesCount), generator(std::move(generator)), threadPool(std::move(threadPool))
 {
 	for (size_t i = 0; i < particlesCount; ++i)
 		particles[i] = this->generator();
@@ -61,8 +63,7 @@ const std::vector<Particle> &ParticleCloud::getParticles() const
 
 void ParticleCloud::moveParticles(const glm::vec3 &acceleration, float dt, bool singleThread)
 {
-	ThreadPool &threadPool = ThreadPool::getInstance();
-	const size_t workersCount = threadPool.getWorkersCount(), particlesCount = particles.size(),
+	const size_t workersCount = threadPool->getWorkersCount(), particlesCount = particles.size(),
 				 batchSize = particlesCount / workersCount;
 	std::future<void> futures[workersCount];
 	auto routine = [](std::vector<Particle> &particles, const glm::vec3 acceleration, size_t offset, size_t count,
@@ -81,7 +82,7 @@ void ParticleCloud::moveParticles(const glm::vec3 &acceleration, float dt, bool 
 	else
 	{
 		for (size_t i = 0; i < workersCount; ++i)
-			futures[i] = threadPool.pushTask(routine, std::ref(particles), acceleration, i * batchSize, batchSize, dt);
+			futures[i] = threadPool->pushTask(routine, std::ref(particles), acceleration, i * batchSize, batchSize, dt);
 
 		for (auto &future : futures)
 			future.wait();
@@ -93,8 +94,7 @@ void ParticleCloud::fill(bool singleThread)
 	for (auto &cell : grid.cells)
 		cell.reset();
 
-	ThreadPool &threadPool = ThreadPool::getInstance();
-	const size_t workersCount = threadPool.getWorkersCount(), particlesCount = particles.size(),
+	const size_t workersCount = threadPool->getWorkersCount(), particlesCount = particles.size(),
 				 batchSize = particles.size() / workersCount;
 	std::future<void> futures[workersCount];
 	auto routine = [this](Grid &grid, std::vector<Particle> &particles, size_t offset, size_t count) {
@@ -127,7 +127,7 @@ void ParticleCloud::fill(bool singleThread)
 	else
 	{
 		for (size_t i = 0; i < workersCount; ++i)
-			futures[i] = threadPool.pushTask(routine, std::ref(grid), std::ref(particles), i * batchSize, batchSize);
+			futures[i] = threadPool->pushTask(routine, std::ref(grid), std::ref(particles), i * batchSize, batchSize);
 
 		for (auto &future : futures)
 			future.wait();
@@ -136,7 +136,6 @@ void ParticleCloud::fill(bool singleThread)
 
 void ParticleCloud::resolve(bool singleThread)
 {
-	ThreadPool &threadPool = ThreadPool::getInstance();
 	const size_t cellsCount = grid.cells.size(), batchSize = 1024, tasksCount = (cellsCount / batchSize) + 1;
 	std::future<void> futures[tasksCount];
 	auto routine = [](ParticleCloud *self, Grid &grid, std::vector<Particle> &particles, size_t offset, size_t count) {
@@ -185,7 +184,7 @@ void ParticleCloud::resolve(bool singleThread)
 		{
 			const size_t offset = t * batchSize;
 
-			futures[t] = threadPool.pushTask(
+			futures[t] = threadPool->pushTask(
 				routine, this, std::ref(grid), std::ref(particles), offset, std::min(batchSize, cellsCount - offset));
 		}
 
@@ -257,4 +256,4 @@ void ParticleCloud::pushParticle(Particle &p, const glm::vec3 &v)
 	p.delta += v;
 };
 
-} // namespace b2-core::physics
+} // namespace b2::physics

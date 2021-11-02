@@ -3,16 +3,15 @@
 namespace b2
 {
 
-Isosurface::Isosurface(const glm::ivec3 &fieldSize)
-	: field(fieldSize.x * fieldSize.y * fieldSize.z), fieldSize(fieldSize)
+Isosurface::Isosurface(const glm::ivec3 &fieldSize, std::shared_ptr<ThreadPool> threadPool)
+	: field(fieldSize.x * fieldSize.y * fieldSize.z), fieldSize(fieldSize), threadPool(std::move(threadPool))
 {}
 
 void Isosurface::generateNormals(bool singleThread)
 {
 	const size_t square = fieldSize.x * fieldSize.y, linearSize = fieldSize.x * square;
 
-	ThreadPool &threadPool = ThreadPool::getInstance();
-	const size_t workersCount = threadPool.getWorkersCount(), batchSize = linearSize / workersCount;
+	const size_t workersCount = threadPool->getWorkersCount(), batchSize = linearSize / workersCount;
 	std::future<void> futures[workersCount];
 	auto routine = [this, square](size_t offset, size_t count) {
 		for (size_t i = offset; i < offset + count; ++i)
@@ -42,7 +41,7 @@ void Isosurface::generateNormals(bool singleThread)
 	else
 	{
 		for (int32_t t = 0; t < workersCount; ++t)
-			futures[t] = threadPool.pushTask(routine, t * batchSize, batchSize);
+			futures[t] = threadPool->pushTask(routine, t * batchSize, batchSize);
 
 		for (auto &future : futures)
 			future.wait();
@@ -327,4 +326,4 @@ const int32_t Isosurface::trianglesTable[256][16] = {
 
 const float Isosurface::threshold = 0.65f;
 
-} // namespace b2-core
+} // namespace b2

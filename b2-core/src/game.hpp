@@ -46,6 +46,7 @@ private:
 	//	Isosurface isosurface;
 
 	std::atomic_bool singleThread;
+	std::shared_ptr<ThreadPool> threadPool;
 
 	gl::Buffer surfaceVertices;
 	gl::ShaderProgram shaderProgram;
