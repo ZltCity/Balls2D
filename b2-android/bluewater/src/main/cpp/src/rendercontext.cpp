@@ -44,7 +44,7 @@ AndroidRenderContext::AndroidRenderContext(ANativeWindow *window) : window(windo
 	EGLint contextAttrs[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
 	EGLContext context = eglCreateContext(display, defaultConfig, nullptr, contextAttrs);
 
-	_assert(context != EGL_NO_CONTEXT, 0xe2c81c3d);
+	_assert(context != EGL_NO_CONTEXT, 0xd6a07fa8);
 
 	eglContext = EglPtr(context, [display](EGLContext context) { eglDestroyContext(display, context); });
 

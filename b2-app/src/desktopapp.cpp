@@ -67,8 +67,7 @@ Bytebuffer DesktopApplication::readFile(const std::string &filepath) const
 {
 	std::fstream stream(filepath, std::fstream::in | std::fstream::binary);
 
-	if (!stream.is_open())
-		throw std::runtime_error("Unable to open file.");
+	_assert(stream.is_open(), 0x0f77c02e);
 
 	stream.seekg(0, std::fstream::end);
 

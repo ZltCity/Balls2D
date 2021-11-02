@@ -1,4 +1,3 @@
-#include <map>
 #include <string>
 
 #include <b2/exception.hpp>
@@ -6,56 +5,37 @@
 namespace b2
 {
 
-static const std::map<int32_t, std::string> errTable = {
-	{0x071fb7d9, std::string("Index is out of the range.")},
-	{0x461f5dfa, std::string("Input buffer is empty.")},
-	{0x0f77c02e, std::string("File does not exist.")},
-	{0x1e49e9a9, std::string("IO error while reading file.")},
-	{0x620a358f, std::string("Invalid workers count.")},
-	{0x5fd881d9, std::string("Unable to get sensor manager.")},
-	{0x37753fba, std::string("Could not find accelerometer.")},
-	{0xcc5b7924, std::string("Unable to create sensor event queue.")},
-	{0xae3cf11b, std::string("Could not enable accelerometer.")},
-	{0x8ea6aefc, std::string("Unable to get display connection.")},
-	{0xe18e3ae1, std::string("Unable to create window.")},
-	{0xd6a07fa8, std::string("Unable to create rendering context.")},
-	{0x0ba4af75, std::string("Unable to initialize display connection.")},
-	{0xf7669c12, std::string("Unable to choose EGL config.")},
-	{0x238112b7, std::string("There is no suitable EGL config.")},
-	{0xc639ca32, std::string("Unable to create EGL surface.")},
-	{0xe2c81c3d, std::string("Unable to create EGL context.")},
-	{0x5d236635, std::string("Unable to set EGL context.")},
-	{0x13182aca, std::string("Uninitialized GAPI object.")},
-	{0xa2f0db57, std::string("Undefined texture format.")},
-	{0x9800a19c, std::string("GL_INVALID_ENUM.")},
-	{0x636e76a1, std::string("GL_INVALID_VALUE.")},
-	{0x02f3f490, std::string("GL_INVALID_OPERATION.")},
-	{0x8e699b5d, std::string("GL_OUT_OF_MEMORY.")},
-	{0xd78eead8, std::string("Invalid config value.")},
-	{0x4f62c1fa, std::string("Cell capacity exceeded.")}};
-
-Exception::Exception(int32_t code, const char *brief) : runtime_error(brief), code(code)
-{}
-
-Exception::Exception(int32_t code, const std::string &brief) : runtime_error(brief), code(code)
-{}
-
-int32_t Exception::getCode() const
+std::string errorBrief(uint32_t code)
 {
-	return code;
+	switch (code)
+	{
+		case 0x071fb7d9: return {"Index is out of the range."};
+		case 0x461f5dfa: return {"Input buffer is empty."};
+		case 0x0f77c02e: return {"File open error."};
+		case 0x1e49e9a9: return {"IO error."};
+		case 0x620a358f: return {"Invalid workers count."};
+		case 0x5fd881d9: return {"Unable to get sensor manager."};
+		case 0x37753fba: return {"Could not find accelerometer."};
+		case 0xcc5b7924: return {"Unable to create sensor event queue."};
+		case 0xae3cf11b: return {"Could not enable accelerometer."};
+		case 0x8ea6aefc: return {"Unable to get display connection."};
+		case 0xe18e3ae1: return {"Unable to create window."};
+		case 0xd6a07fa8: return {"Unable to create rendering context."};
+		case 0x0ba4af75: return {"Unable to initialize display connection."};
+		case 0xf7669c12: return {"Unable to choose EGL config."};
+		case 0x238112b7: return {"There is no suitable EGL config."};
+		case 0xc639ca32: return {"Unable to create EGL surface."};
+		case 0x5d236635: return {"Unable to set rendering context."};
+		case 0x13182aca: return {"Uninitialized GAPI object."};
+		case 0xa2f0db57: return {"Undefined texture format."};
+		case 0x9800a19c: return {"GL_INVALID_ENUM."};
+		case 0x636e76a1: return {"GL_INVALID_VALUE."};
+		case 0x02f3f490: return {"GL_INVALID_OPERATION."};
+		case 0x8e699b5d: return {"GL_OUT_OF_MEMORY."};
+		case 0xd78eead8: return {"Invalid config value."};
+		case 0x4f62c1fa: return {"Cell capacity exceeded."};
+		default: return {"Undefined error."};
+	}
 }
 
-void _assert(bool x, int32_t code)
-{
-	if (!x)
-		throw Exception(code, errorBrief(code));
-}
-
-std::string errorBrief(int32_t code)
-{
-	auto iter = errTable.find(code);
-
-	return iter == errTable.end() ? std::string() : iter->second;
-}
-
-} // namespace b2-core
+} // namespace b2
