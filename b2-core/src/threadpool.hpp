@@ -20,15 +20,16 @@ public:
 	~ThreadPool();
 
 	template<typename Task, typename... Arguments>
-	[[nodiscard]] auto pushTask(Task task, Arguments... arguments)
+	[[nodiscard]] inline auto pushTask(Task task, Arguments &&...arguments)
 		-> std::future<std::invoke_result_t<Task, Arguments...>>;
 
-	[[nodiscard]] size_t getWorkersCount() const;
+	[[nodiscard]] inline size_t getWorkersCount() const;
 
 private:
 	using ThreadPtr = std::unique_ptr<std::thread>;
 
-	[[nodiscard]] std::function<void()> popTask();
+	[[nodiscard]] inline std::function<void()> popTask();
+
 	static void workerRoutine(ThreadPool *self);
 
 	std::vector<ThreadPtr> workers;
@@ -39,13 +40,13 @@ private:
 };
 
 template<typename Task, typename... Arguments>
-auto ThreadPool::pushTask(Task task, Arguments... arguments) -> std::future<std::invoke_result_t<Task, Arguments...>>
+auto ThreadPool::pushTask(Task task, Arguments &&...arguments) -> std::future<std::invoke_result_t<Task, Arguments...>>
 {
 	using TaskResult = std::invoke_result_t<Task, Arguments...>;
-	using Promise = std::promise<TaskResult>;
 
-	std::shared_ptr<Promise> promise = std::make_shared<Promise>();
-	std::future<TaskResult> future = promise->get_future();
+	auto promise = std::make_shared<std::promise<TaskResult>>();
+	auto future = promise->get_future();
+
 	std::lock_guard lock(tasksLock);
 
 	tasks.push([promise, task, arguments...]() {
@@ -61,6 +62,25 @@ auto ThreadPool::pushTask(Task task, Arguments... arguments) -> std::future<std:
 	alarm.notify_one();
 
 	return future;
+}
+
+size_t ThreadPool::getWorkersCount() const
+{
+	return workers.size();
+}
+
+std::function<void()> ThreadPool::popTask()
+{
+	std::lock_guard lock(tasksLock);
+
+	if (tasks.empty())
+		return {};
+
+	auto task = std::move(tasks.front());
+
+	tasks.pop();
+
+	return task;
 }
 
 } // namespace b2

@@ -18,7 +18,7 @@ ThreadPool::ThreadPool(size_t workerCount) : workers(workerCount), alarm(false),
 
 ThreadPool::~ThreadPool()
 {
-	assert(alive.load());
+	assert(alive);
 
 	{
 		std::lock_guard lock(aliveLock);
@@ -30,25 +30,6 @@ ThreadPool::~ThreadPool()
 
 	for (ThreadPtr &thread : workers)
 		thread->join();
-}
-
-size_t ThreadPool::getWorkersCount() const
-{
-	return workers.size();
-}
-
-std::function<void()> ThreadPool::popTask()
-{
-	std::lock_guard lock(tasksLock);
-
-	if (tasks.empty())
-		return {};
-
-	auto task = std::move(tasks.front());
-
-	tasks.pop();
-
-	return task;
 }
 
 void ThreadPool::workerRoutine(ThreadPool *self)
