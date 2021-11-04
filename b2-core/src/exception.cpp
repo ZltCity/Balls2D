@@ -27,6 +27,8 @@ std::string errorBrief(uint32_t code)
 		case 0xc639ca32: return {"Unable to create EGL surface."};
 		case 0x5d236635: return {"Unable to set rendering context."};
 		case 0x13182aca: return {"Uninitialized GAPI object."};
+		case 0x8909b556: return {"Shader compile error."};
+		case 0x1229cb91: return {"Shader program link error."};
 		case 0xa2f0db57: return {"Undefined texture format."};
 		case 0x9800a19c: return {"GL_INVALID_ENUM."};
 		case 0x636e76a1: return {"GL_INVALID_VALUE."};

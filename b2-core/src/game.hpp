@@ -7,7 +7,6 @@
 
 #include "camera.hpp"
 #include "gearbox.hpp"
-#include "gl.hpp"
 #include "isosurface.hpp"
 #include "physics.hpp"
 #include "render.hpp"
@@ -50,8 +49,7 @@ private:
 	std::shared_ptr<ThreadPool> threadPool;
 
 	render::BasicMesh surfaceMesh;
-	//	gl::Buffer surfaceVertices;
-	gl::ShaderProgram shaderProgram;
+	render::Material material;
 
 	glm::ivec3 gridSize;
 	Camera camera;

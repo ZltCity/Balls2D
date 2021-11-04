@@ -1,11 +1,13 @@
 #pragma once
 
 #include <memory>
+#include <variant>
 #include <vector>
 
 #include <GLES3/gl3.h>
 
 #include <b2/exception.hpp>
+#include <glm/glm.hpp>
 
 #include "logger.hpp"
 
@@ -62,15 +64,14 @@ public:
 
 	BasicMesh() = default;
 	template<class VertexT>
-	BasicMesh(
-		const std::vector<VertexT> &vertices, const std::vector<VertexAttribute> &layout, Usage usage = StaticDraw);
+	BasicMesh(const std::vector<VertexT> &vertices, std::vector<VertexAttribute> layout, Usage usage = StaticDraw);
 	BasicMesh(const BasicMesh &) = delete;
-	BasicMesh(BasicMesh &&other) noexcept;
+	BasicMesh(BasicMesh &&other) noexcept = default;
 
 	virtual ~BasicMesh() = default;
 
 	BasicMesh &operator=(const BasicMesh &) = delete;
-	BasicMesh &operator=(BasicMesh &&other) noexcept;
+	BasicMesh &operator=(BasicMesh &&other) noexcept = default;
 
 	template<class VertexT>
 	void update(const std::vector<VertexT> &vertices, size_t offset = 0);
@@ -85,8 +86,54 @@ private:
 class IndexedMesh : public BasicMesh
 {};
 
+class Uniform
+{
+public:
+	using Value = std::variant<int32_t, float, glm::vec2, glm::vec3, glm::vec4, glm::mat4>;
+
+	template<class T>
+	Uniform(std::string name, const T &value) noexcept;
+
+	void set(const class Material &raw) const;
+
+private:
+	std::string name;
+	Value value;
+};
+
 class Material
-{};
+{
+	friend class Uniform;
+
+public:
+	struct Shader
+	{
+		enum Type
+		{
+			Vertex = GL_VERTEX_SHADER,
+			Fragment = GL_FRAGMENT_SHADER
+		};
+
+		Bytebuffer source;
+		Type type;
+	};
+
+	Material() = default;
+	Material(const std::vector<Shader> &shaders, std::vector<Uniform> uniforms);
+	Material(const Material &) = delete;
+	Material(Material &&other) noexcept = default;
+
+	Material &operator=(const Material &) = delete;
+	Material &operator=(Material &&other) noexcept = default;
+
+	void bind() const;
+
+private:
+	[[nodiscard]] static detail::GLhandle loadShader(const Shader &shader);
+
+	detail::GLhandle program;
+	std::vector<Uniform> uniforms;
+};
 
 namespace detail
 {
@@ -169,11 +216,14 @@ auto _i(F f, Args... args) -> typename std::invoke_result<F, Args...>::type
 	}
 }
 
+template<class T>
+void setUniform(const std::string &, const T &, const GLhandle &);
+
 } // namespace detail
 
 template<class VertexT>
-BasicMesh::BasicMesh(const std::vector<VertexT> &vertices, const std::vector<VertexAttribute> &layout, Usage usage)
-	: layout(layout)
+BasicMesh::BasicMesh(const std::vector<VertexT> &vertices, std::vector<VertexAttribute> layout, Usage usage)
+	: layout(std::move(layout))
 {
 	using namespace detail;
 
@@ -197,5 +247,9 @@ void BasicMesh::update(const std::vector<VertexT> &vertices, size_t offset)
 	_i(glBufferSubData, GL_ARRAY_BUFFER, offset, vertices.size() * sizeof(VertexT), vertices.data());
 	_i(glBindBuffer, GL_ARRAY_BUFFER, 0);
 }
+
+template<class T>
+Uniform::Uniform(std::string name, const T &value) noexcept : name(std::move(name)), value(value)
+{}
 
 } // namespace b2::render

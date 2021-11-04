@@ -43,8 +43,6 @@ Game::Game(std::shared_ptr<Application> application)
 
 void Game::update()
 {
-	using namespace gl;
-
 	size_t frames = 0;
 	float pTime = 0.0f, rTime = 0.0f;
 	Timer localTimer;
@@ -81,12 +79,17 @@ void Game::initLogic(const glm::ivec2 &surfaceSize, size_t gridWidth, size_t par
 
 	particlesCloud = physics::ParticleCloud(
 		gridSize, particlesCount,
-		[this]() -> physics::Particle {
-			std::default_random_engine generator(Timer::getTimestamp());
-			std::uniform_real_distribution<float> x(0.5f, float(gridSize.x) - 0.5f), y(0.5f, float(gridSize.y) - 0.5f),
-				z(0.5f, float(gridSize.z) - 0.5f);
+		[this](size_t idx) -> physics::Particle {
+			//			std::default_random_engine generator(Timer::getTimestamp());
+			//			std::uniform_real_distribution<float> x(0.5f, float(gridSize.x) - 0.5f), y(0.5f,
+			// float(gridSize.y)
+			//- 0.5f), 				z(0.5f, float(gridSize.z) - 0.5f);
+			//
+			//			return physics::Particle(glm::vec3(x(generator), y(generator), z(generator)));
+			auto square = gridSize.x * gridSize.y;
+			auto x = (idx % square) % gridSize.x, y = (idx % square) / gridSize.x, z = idx / square;
 
-			return physics::Particle(glm::vec3(x(generator), y(generator), z(generator)));
+			return physics::Particle(glm::vec3 {x, z * 2.0f, y} + glm::vec3 {0.5f, 0.5f, 0.5f});
 		},
 		threadPool);
 	//	isosurface = Isosurface(gridSize + glm::ivec3(margin));
@@ -94,12 +97,6 @@ void Game::initLogic(const glm::ivec2 &surfaceSize, size_t gridWidth, size_t par
 
 void Game::initRender(const glm::ivec2 &surfaceSize)
 {
-	using namespace gl;
-
-	const Shader vertexShader(ShaderType::Vertex, application->readFile("shaders/particle.vs")),
-		fragmentShader(ShaderType::Fragment, application->readFile("shaders/particle.fs"));
-
-	shaderProgram = ShaderProgram({vertexShader, fragmentShader});
 	projection = camera.getPerspective(75.0f, float(surfaceSize.x) / surfaceSize.y, 1000.f);
 
 	camera.lookAt(glm::vec3(.0f, 0.0f, -100.f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0));
@@ -109,6 +106,11 @@ void Game::initRender(const glm::ivec2 &surfaceSize)
 		{{3, sizeof(physics::Particle), render::VertexAttribute::Float},
 		 {3, sizeof(physics::Particle), render::VertexAttribute::Float}},
 		render::BasicMesh::DynamicDraw);
+	material = render::Material(
+		{{application->readFile("shaders/particle.vs"), render::Material::Shader::Vertex},
+		 {application->readFile("shaders/particle.fs"), render::Material::Shader::Fragment}},
+		{{"in_surface_size", surfaceSize}, {"in_point_size", 2.0f}});
+
 	this->surfaceSize = surfaceSize;
 }
 
@@ -135,8 +137,6 @@ catch (const std::exception &ex)
 
 void Game::presentScene()
 {
-	using namespace gl;
-
 	const glm::vec3 boxSize(gridSize /* + glm::ivec3(margin)*/);
 	const auto &particles = particlesCloud.getParticles();
 
@@ -151,21 +151,16 @@ void Game::presentScene()
 	//	}
 	surfaceMesh.update(particles);
 	surfaceMesh.bind();
-//	surfaceVertices.bind();
-//	setVertexFormat(std::vector<VertexAttrib>());
+	material.bind();
 
-	shaderProgram.use();
+	render::Uniform("in_projection", projection).set(material);
+	render::Uniform("in_modelview", camera.getView() * glm::translate(glm::mat4(1.f), -boxSize * 0.5f)).set(material);
 
-	Mat4Uniform("in_projection", projection).set(shaderProgram);
-	Mat4Uniform("in_modelview", camera.getView() * glm::translate(glm::mat4(1.f), -boxSize * 0.5f)).set(shaderProgram);
-	Vec2Uniform("in_surface_size", surfaceSize).set(shaderProgram);
-	FloatUniform("in_point_size", 2.0f).set(shaderProgram);
+	render::detail::_i(glEnable, GL_DEPTH_TEST);
 
-	_i(glEnable, GL_DEPTH_TEST);
-
-	setClearColor({.5f, .6f, .4f, 1.f});
-	clear(ClearMode::Color | ClearMode::Depth);
-	draw(DrawMode::Points, particles.size());
+	render::detail::_i(glClearColor, .5f, .6f, .4f, 1.f);
+	render::detail::_i(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	render::detail::_i(glDrawArrays, GL_POINTS, 0, particles.size());
 
 	application->swapBuffers();
 }

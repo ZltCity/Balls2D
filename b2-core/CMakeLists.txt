@@ -7,7 +7,6 @@ add_library(b2-core STATIC
 	src/exception.cpp
 	src/game.cpp
 	src/gearbox.cpp
-	src/gl.cpp
 	src/isosurface.cpp
 	src/logger.cpp
 	src/main.cpp

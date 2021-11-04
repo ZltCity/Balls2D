@@ -31,12 +31,11 @@ ParticleCloud::Grid::Grid(const glm::ivec3 &size) : size(size)
 }
 
 ParticleCloud::ParticleCloud(
-	const glm::ivec3 &gridSize, size_t particlesCount, std::function<Particle()> generator,
-	std::shared_ptr<ThreadPool> threadPool)
+	const glm::ivec3 &gridSize, size_t particlesCount, Generator generator, std::shared_ptr<ThreadPool> threadPool)
 	: grid(gridSize), particles(particlesCount), generator(std::move(generator)), threadPool(std::move(threadPool))
 {
 	for (size_t i = 0; i < particlesCount; ++i)
-		particles[i] = this->generator();
+		particles[i] = this->generator(i);
 }
 
 void ParticleCloud::update(const glm::vec3 &acceleration, float dt, bool singleThread)

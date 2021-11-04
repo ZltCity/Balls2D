@@ -23,7 +23,7 @@ struct Particle
 class ParticleCloud
 {
 public:
-	using Generator = std::function<Particle()>;
+	using Generator = std::function<Particle(size_t)>;
 
 	ParticleCloud() = default;
 	ParticleCloud(
