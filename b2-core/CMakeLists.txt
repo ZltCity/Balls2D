@@ -12,6 +12,7 @@ add_library(b2-core STATIC
 	src/logger.cpp
 	src/main.cpp
 	src/physics.cpp
+	src/render.cpp
 	src/threadpool.cpp
 	src/timer.cpp)
 
@@ -19,6 +20,7 @@ target_include_directories(b2-core PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(b2-core PUBLIC
+	assimp
 	fmt
 	glm
 	nlohmann_json

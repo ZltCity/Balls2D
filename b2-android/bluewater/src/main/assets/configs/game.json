@@ -1,12 +1,12 @@
 {
 	"physics": {
-		"particlesCount": 4000,
+		"particlesCount": 128000,
 		"gridSize": {
-			"width": 24
+			"width": 80
 		}
 	},
 	"render": {
 		"mode": "surface"
 	},
-	"singleThread": true
+	"singleThread": false
 }

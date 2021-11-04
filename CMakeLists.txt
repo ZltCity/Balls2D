@@ -7,6 +7,7 @@ project(BlueWater2
 include(FetchContent)
 
 # 3rd party
+add_subdirectory(contrib/assimp)
 add_subdirectory(contrib/format)
 add_subdirectory(contrib/glm)
 add_subdirectory(contrib/json)

@@ -9,6 +9,7 @@
 #include "game.hpp"
 #include "isosurface.hpp"
 #include "logger.hpp"
+#include "render.hpp"
 
 namespace b2
 {
@@ -103,6 +104,11 @@ void Game::initRender(const glm::ivec2 &surfaceSize)
 
 	camera.lookAt(glm::vec3(.0f, 0.0f, -100.f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0));
 
+	surfaceMesh = render::BasicMesh(
+		particlesCloud.getParticles(),
+		{{3, sizeof(physics::Particle), render::VertexAttribute::Float},
+		 {3, sizeof(physics::Particle), render::VertexAttribute::Float}},
+		render::BasicMesh::DynamicDraw);
 	this->surfaceSize = surfaceSize;
 }
 
@@ -134,19 +140,19 @@ void Game::presentScene()
 	const glm::vec3 boxSize(gridSize /* + glm::ivec3(margin)*/);
 	const auto &particles = particlesCloud.getParticles();
 
-	if (!surfaceVertices || surfaceVertices.getSize() < particles.size() * sizeof(physics::Particle))
-	{
-		surfaceVertices = Buffer(BufferType::Vertex, particles);
-	}
-	else
-	{
-		surfaceVertices.bind();
-		surfaceVertices.write(0, particles);
-	}
-
-	surfaceVertices.bind();
-	setVertexFormat(std::vector<VertexAttrib>(
-		{{3, sizeof(physics::Particle), AttribType::Float}, {3, sizeof(physics::Particle), AttribType::Float}}));
+	//	if (!surfaceVertices || surfaceVertices.getSize() < particles.size() * sizeof(physics::Particle))
+	//	{
+	//		surfaceVertices = Buffer(BufferType::Vertex, particles);
+	//	}
+	//	else
+	//	{
+	//		surfaceVertices.bind();
+	//		surfaceVertices.write(0, particles);
+	//	}
+	surfaceMesh.update(particles);
+	surfaceMesh.bind();
+//	surfaceVertices.bind();
+//	setVertexFormat(std::vector<VertexAttrib>());
 
 	shaderProgram.use();
 

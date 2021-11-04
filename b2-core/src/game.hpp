@@ -10,6 +10,7 @@
 #include "gl.hpp"
 #include "isosurface.hpp"
 #include "physics.hpp"
+#include "render.hpp"
 #include "timer.hpp"
 
 namespace b2
@@ -48,7 +49,8 @@ private:
 	std::atomic_bool singleThread;
 	std::shared_ptr<ThreadPool> threadPool;
 
-	gl::Buffer surfaceVertices;
+	render::BasicMesh surfaceMesh;
+	//	gl::Buffer surfaceVertices;
 	gl::ShaderProgram shaderProgram;
 
 	glm::ivec3 gridSize;
