@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 
 add_library(b2-core STATIC
+	src/games/particles.cpp
+	src/games/shapes.cpp
 	src/application.cpp
 	src/camera.cpp
 	src/config.cpp

@@ -4,13 +4,19 @@
 #include <b2/application.hpp>
 
 #include "game.hpp"
+#include "games/particles.hpp"
+#include "games/shapes.hpp"
 #include "logger.hpp"
 
 namespace b2
 {
 
+void registerGames();
+
 void main(std::shared_ptr<Application> application)
 {
+	registerGames();
+
 	bool quitRequest = false;
 	std::unique_ptr<Game> game;
 
@@ -47,7 +53,7 @@ void main(std::shared_ptr<Application> application)
 				}
 				case Event::WindowCreated:
 				{
-					game = std::make_unique<Game>(application);
+					game = Game::create("shapes", application);
 					break;
 				}
 				case Event::WindowDestroyed:
@@ -67,6 +73,18 @@ void main(std::shared_ptr<Application> application)
 		if (game != nullptr)
 			game->update();
 	}
+}
+
+void registerGames()
+{
+	Game::registerGame(
+		"particles", [](std::shared_ptr<Application> application) -> auto {
+			return std::make_unique<games::ParticlesGame>(std::move(application));
+		});
+	Game::registerGame(
+		"shapes", [](std::shared_ptr<Application> application) -> auto {
+			return std::make_unique<games::ShapesGame>(std::move(application));
+		});
 }
 
 } // namespace b2
