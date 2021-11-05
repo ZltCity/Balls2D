@@ -29,17 +29,17 @@ ShapesGame::ShapesGame(std::shared_ptr<Application> application) : application(a
 
 void ShapesGame::update()
 {
-	render::detail::_i(glClearColor, 0.15f, .15f, .15f, 1.f);
-	render::detail::_i(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	render::gles3::_i(glClearColor, 0.15f, .15f, .15f, 1.f);
+	render::gles3::_i(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	material.bind();
-	render::Uniform("in_projection", glm::mat4{1}).set(material);
-	render::Uniform("in_modelview", glm::mat4{1}).set(material);
+	render::Uniform("in_projection", glm::mat4 {1}).set(material);
+	render::Uniform("in_modelview", glm::mat4 {1}).set(material);
 
-	for (const auto &mesh: meshes)
+	for (const auto &mesh : meshes)
 		mesh.bind();
 
-	render::detail::_i(glDrawArrays, GL_TRIANGLES, 0, 3);
+	render::gles3::_i(glDrawArrays, GL_TRIANGLES, 0, 3);
 
 	application->swapBuffers();
 }

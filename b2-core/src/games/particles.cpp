@@ -156,11 +156,11 @@ void ParticlesGame::presentScene()
 	render::Uniform("in_projection", projection).set(material);
 	render::Uniform("in_modelview", camera.getView() * glm::translate(glm::mat4(1.f), -boxSize * 0.5f)).set(material);
 
-	render::detail::_i(glEnable, GL_DEPTH_TEST);
+	render::gles3::_i(glEnable, GL_DEPTH_TEST);
 
-	render::detail::_i(glClearColor, .5f, .6f, .4f, 1.f);
-	render::detail::_i(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	render::detail::_i(glDrawArrays, GL_POINTS, 0, particles.size());
+	render::gles3::_i(glClearColor, .5f, .6f, .4f, 1.f);
+	render::gles3::_i(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	render::gles3::_i(glDrawArrays, GL_POINTS, 0, particles.size());
 
 	application->swapBuffers();
 }
