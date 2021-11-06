@@ -50,7 +50,8 @@ private:
 	std::shared_ptr<ThreadPool> threadPool;
 
 	render::BasicMesh surfaceMesh;
-	render::Material material;
+	//	render::Material material;
+	render::Cache<render::Material> materials;
 
 	glm::ivec3 gridSize;
 	Camera camera;
@@ -60,4 +61,4 @@ private:
 	float elapsed;
 };
 
-} // namespace b2
+} // namespace b2::games

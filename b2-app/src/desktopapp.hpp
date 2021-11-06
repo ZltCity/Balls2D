@@ -18,8 +18,6 @@ public:
 
 	[[nodiscard]] std::vector<Event> pollEvents() const final;
 
-	[[nodiscard]] Bytebuffer readFile(const std::string &filepath) const final;
-
 	[[nodiscard]] glm::uvec2 getWindowSize() const final;
 
 	void swapBuffers() final;

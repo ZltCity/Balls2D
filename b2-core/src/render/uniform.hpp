@@ -17,6 +17,7 @@ class Uniform
 public:
 	using Value = std::variant<int32_t, float, glm::vec2, glm::vec3, glm::vec4, glm::mat4>;
 
+	Uniform() = default;
 	template<class T>
 	Uniform(std::string name, const T &value) noexcept;
 

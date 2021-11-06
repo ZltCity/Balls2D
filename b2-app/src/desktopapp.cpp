@@ -70,23 +70,6 @@ std::vector<Event> DesktopApplication::pollEvents() const
 	return events;
 }
 
-Bytebuffer DesktopApplication::readFile(const std::string &filepath) const
-{
-	std::fstream stream(filepath, std::fstream::in | std::fstream::binary);
-
-	_assert(stream.is_open(), 0x0f77c02e);
-
-	stream.seekg(0, std::fstream::end);
-
-	auto size = size_t(stream.tellg());
-	auto buffer = Bytebuffer(size);
-
-	stream.seekg(0, std::fstream::beg);
-	stream.read(reinterpret_cast<char *>(buffer.data()), static_cast<std::streamsize>(size));
-
-	return buffer;
-}
-
 glm::uvec2 DesktopApplication::getWindowSize() const
 {
 	if (window == nullptr)

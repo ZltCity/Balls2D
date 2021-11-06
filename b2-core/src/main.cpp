@@ -53,7 +53,7 @@ void main(std::shared_ptr<Application> application)
 				}
 				case Event::WindowCreated:
 				{
-					game = Game::create("shapes", application);
+					game = Game::create("particles", application);
 					break;
 				}
 				case Event::WindowDestroyed:

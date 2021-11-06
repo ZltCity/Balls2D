@@ -1,7 +1,17 @@
+#include <fmt/format.h>
+
+#include <nlohmann/json.hpp>
+
+#include "../utils.hpp"
 #include "material.hpp"
+
+#include "../logger.hpp"
 
 namespace b2::render
 {
+
+std::vector<render::Shader> parseShaders(const nlohmann::json &meta, const std::filesystem::path &materialsRoot);
+std::vector<render::Uniform> parseUniforms(const nlohmann::json &meta);
 
 Material::Material(const std::vector<Shader> &shaders, std::vector<Uniform> uniforms) : uniforms(std::move(uniforms))
 {
@@ -68,6 +78,79 @@ gles3::GLhandle Material::loadShader(const Shader &shader)
 	}
 
 	return handle;
+}
+
+Cache<Material> loadMaterials(const std::filesystem::path &materialsRoot)
+{
+	namespace fs = std::filesystem;
+
+	auto cache = Cache<Material> {};
+
+	for (const auto &entry : fs::directory_iterator(materialsRoot, fs::directory_options::follow_directory_symlink))
+	{
+		const auto &entryPath = entry.path();
+
+		if (entryPath.extension() != ".json")
+			continue;
+
+		auto meta = nlohmann::json::parse(readFile(entryPath));
+
+		cache.put(meta["id"], {parseShaders(meta["shaders"], materialsRoot), parseUniforms(meta["constants"])});
+	}
+
+	return cache;
+}
+
+std::vector<render::Shader> parseShaders(const nlohmann::json &meta, const std::filesystem::path &materialsRoot)
+{
+	namespace fs = std::filesystem;
+
+	auto shaders = std::vector<Shader> {};
+
+	for (const auto &shader : meta)
+	{
+		const auto shaderPath = fs::path(shader["path"]);
+		const auto extension = shaderPath.extension().string();
+		auto shaderType = render::Shader::Type {};
+
+		if (extension == ".vert")
+			shaderType = render::Shader::Type::Vertex;
+		else if (extension == ".frag")
+			shaderType = render::Shader::Type::Fragment;
+		else
+		{
+			warn("%s", fmt::format("Unknown shader file extension '{}'.", extension).c_str());
+			continue;
+		}
+
+		shaders.emplace_back(readFile(materialsRoot / "shaders" / shaderPath), shaderType);
+	}
+
+	return shaders;
+}
+
+std::vector<render::Uniform> parseUniforms(const nlohmann::json &meta)
+{
+	auto uniforms = std::vector<Uniform> {};
+
+	for (const auto &constant : meta)
+	{
+		const auto id = constant["id"];
+		auto uniform = Uniform {};
+
+		switch (constant["value"].type())
+		{
+			case nlohmann::json::value_t::number_float:
+			{
+				uniform = Uniform(id, constant["value"].get<float>());
+				break;
+			}
+		}
+
+		uniforms.emplace_back(uniform);
+	}
+
+	return uniforms;
 }
 
 } // namespace b2::render

@@ -9,6 +9,7 @@
 #include "../isosurface.hpp"
 #include "../logger.hpp"
 #include "../render.hpp"
+#include "../utils.hpp"
 #include "particles.hpp"
 
 namespace b2::games
@@ -20,12 +21,13 @@ ParticlesGame::ParticlesGame(std::shared_ptr<Application> application)
 	: application(application),
 	  acceleration(glm::vec3(0.0f, -9.8f, 0.0f)),
 	  singleThread(true),
+	  materials(render::loadMaterials("materials/")),
 	  projection(1.0f),
 	  elapsed(0.0f)
 {
 	using json = nlohmann::json;
 
-	const Config config(application->readFile(configPath));
+	const Config config(readFile(configPath));
 	const json physicsConfig = config.json.at("physics");
 
 	singleThread.store(config.json.at("singleThread").get<bool>());
@@ -106,10 +108,6 @@ void ParticlesGame::initRender(const glm::ivec2 &surfaceSize)
 		{{3, sizeof(physics::Particle), render::VertexAttribute::Float},
 		 {3, sizeof(physics::Particle), render::VertexAttribute::Float}},
 		render::BasicMesh::DynamicDraw);
-	material = render::Material(
-		{{application->readFile("shaders/particle.vs"), render::Material::Shader::Vertex},
-		 {application->readFile("shaders/particle.fs"), render::Material::Shader::Fragment}},
-		{{"in_surface_size", surfaceSize}, {"in_point_size", 2.0f}});
 
 	this->surfaceSize = surfaceSize;
 }
@@ -149,12 +147,15 @@ void ParticlesGame::presentScene()
 	//		surfaceVertices.bind();
 	//		surfaceVertices.write(0, particles);
 	//	}
+	auto material = materials.get("particles");
+
 	surfaceMesh.update(particles);
 	surfaceMesh.bind();
-	material.bind();
+	material->bind();
 
-	render::Uniform("in_projection", projection).set(material);
-	render::Uniform("in_modelview", camera.getView() * glm::translate(glm::mat4(1.f), -boxSize * 0.5f)).set(material);
+	render::Uniform("in_projection", projection).set(*material);
+	render::Uniform("in_modelview", camera.getView() * glm::translate(glm::mat4(1.f), -boxSize * 0.5f)).set(*material);
+	render::Uniform("in_surface_size", surfaceSize).set(*material);
 
 	render::gles3::_i(glEnable, GL_DEPTH_TEST);
 

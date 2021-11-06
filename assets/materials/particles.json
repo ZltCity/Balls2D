@@ -1,0 +1,17 @@
+{
+	"id": "particles",
+	"shaders": [
+		{
+			"path": "particle.vert"
+		},
+		{
+			"path": "particle.frag"
+		}
+	],
+	"constants": [
+		{
+			"id": "in_point_size",
+			"value": 2.0
+		}
+	]
+}

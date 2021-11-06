@@ -61,8 +61,6 @@ public:
 
 	[[nodiscard]] virtual std::vector<Event> pollEvents() const = 0;
 
-	[[nodiscard]] virtual Bytebuffer readFile(const std::string &filepath) const = 0;
-
 	[[nodiscard]] virtual glm::uvec2 getWindowSize() const = 0;
 
 	virtual void swapBuffers() = 0;

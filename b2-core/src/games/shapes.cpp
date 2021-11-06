@@ -1,5 +1,6 @@
 #include "shapes.hpp"
 #include "../render.hpp"
+#include "../utils.hpp"
 
 namespace b2::games
 {
@@ -22,8 +23,8 @@ ShapesGame::ShapesGame(std::shared_ptr<Application> application) : application(a
 			{4, sizeof(SimpleVertex), render::VertexAttribute::Float},
 		});
 	material = render::Material(
-		{{application->readFile("shaders/simple.vert"), render::Material::Shader::Vertex},
-		 {application->readFile("shaders/simple.frag"), render::Material::Shader::Fragment}},
+		{{readFile("materials/shaders/simple.vert"), render::Shader::Type::Vertex},
+		 {readFile("materials/shaders/simple.frag"), render::Shader::Type::Fragment}},
 		{});
 }
 

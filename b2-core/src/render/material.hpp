@@ -1,6 +1,9 @@
 #pragma once
 
+#include <filesystem>
+
 #include "backends/gles3.hpp"
+#include "cache.hpp"
 #include "uniform.hpp"
 
 namespace b2::render
@@ -8,23 +11,23 @@ namespace b2::render
 
 using namespace backends;
 
+struct Shader
+{
+	enum class Type
+	{
+		Vertex = GL_VERTEX_SHADER,
+		Fragment = GL_FRAGMENT_SHADER
+	};
+
+	Bytebuffer source;
+	Type type;
+};
+
 class Material
 {
 	friend class Uniform;
 
 public:
-	struct Shader
-	{
-		enum Type
-		{
-			Vertex = GL_VERTEX_SHADER,
-			Fragment = GL_FRAGMENT_SHADER
-		};
-
-		Bytebuffer source;
-		Type type;
-	};
-
 	Material() = default;
 	Material(const std::vector<Shader> &shaders, std::vector<Uniform> uniforms);
 	Material(const Material &) = delete;
@@ -41,5 +44,7 @@ private:
 	gles3::GLhandle program;
 	std::vector<Uniform> uniforms;
 };
+
+Cache<Material> loadMaterials(const std::filesystem::path &materialsRoot);
 
 } // namespace b2::render
