@@ -6,9 +6,8 @@
 #include <GLES3/gl3.h>
 
 #include <b2/exception.hpp>
+#include <b2/logger.hpp>
 #include <glm/glm.hpp>
-
-#include "../../logger.hpp"
 
 namespace b2::render::backends::gles3
 {
@@ -79,7 +78,7 @@ void GLhandle::release()
 		}
 		catch (const std::exception &ex)
 		{
-			crit("Error occurred on GL resource free: ", ex.what());
+			error(fmt::format("Error occurred on GL resource free: {}", ex.what()));
 		}
 
 	handle = 0;

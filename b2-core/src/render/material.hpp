@@ -2,6 +2,8 @@
 
 #include <filesystem>
 
+#include <b2/bytebuffer.hpp>
+
 #include "backends/gles3.hpp"
 #include "cache.hpp"
 #include "uniform.hpp"

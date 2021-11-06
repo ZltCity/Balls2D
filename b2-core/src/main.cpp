@@ -2,11 +2,11 @@
 #include <memory>
 
 #include <b2/application.hpp>
+#include <b2/logger.hpp>
 
 #include "game.hpp"
 #include "games/particles.hpp"
 #include "games/shapes.hpp"
-#include "logger.hpp"
 
 namespace b2
 {
@@ -15,6 +15,8 @@ void registerGames();
 
 void main(std::shared_ptr<Application> application)
 {
+	auto loggerAnchor = Logger::getInstance().setWriteCallback([](const std::string &s) { std::cout << s; });
+
 	registerGames();
 
 	bool quitRequest = false;
@@ -32,13 +34,10 @@ void main(std::shared_ptr<Application> application)
 
 					switch (touch.type)
 					{
-						case Touch::Move: info("Move", 1); break;
-						case Touch::Down: info("Down", 1); break;
-						case Touch::Up: info("Up", 1); break;
+						case Touch::Move: break;
+						case Touch::Down: break;
+						case Touch::Up: break;
 					}
-
-					for (const glm::vec2 &p : touch.points)
-						info("%f, %f", p.x, p.y);
 
 					break;
 				}

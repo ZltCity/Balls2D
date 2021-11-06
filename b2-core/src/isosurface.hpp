@@ -1,9 +1,10 @@
 #pragma once
 
-#include <glm/glm.hpp>
 #include <vector>
 
-#include "logger.hpp"
+#include <b2/logger.hpp>
+#include <glm/glm.hpp>
+
 #include "threadpool.hpp"
 
 namespace b2

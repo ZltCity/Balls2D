@@ -1,13 +1,14 @@
+#include <iostream>
 #include <random>
 
 #include <b2/bytebuffer.hpp>
 #include <b2/exception.hpp>
+#include <b2/logger.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <nlohmann/json.hpp>
 
 #include "../config.hpp"
 #include "../isosurface.hpp"
-#include "../logger.hpp"
 #include "../render.hpp"
 #include "../utils.hpp"
 #include "particles.hpp"
@@ -60,7 +61,7 @@ void ParticlesGame::update()
 
 	if (elapsed >= 1000.0f)
 	{
-		info("Physics: %f, Render: %f", pTime / float(frames), rTime / float(frames));
+		info1(fmt::format("Physics: {}, Render: {}", pTime / float(frames), rTime / float(frames)));
 
 		frames = 0;
 		elapsed = pTime = rTime = 0.0f;
@@ -129,7 +130,7 @@ try
 }
 catch (const std::exception &ex)
 {
-	crit("Error occurred: %s", ex.what());
+	error(fmt::format("Error occurred: {}", ex.what()));
 	std::terminate();
 }
 

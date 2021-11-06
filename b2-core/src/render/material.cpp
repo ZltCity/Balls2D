@@ -1,11 +1,10 @@
 #include <fmt/format.h>
 
+#include <b2/logger.hpp>
 #include <nlohmann/json.hpp>
 
 #include "../utils.hpp"
 #include "material.hpp"
-
-#include "../logger.hpp"
 
 namespace b2::render
 {
@@ -119,7 +118,7 @@ std::vector<render::Shader> parseShaders(const nlohmann::json &meta, const std::
 			shaderType = render::Shader::Type::Fragment;
 		else
 		{
-			warn("%s", fmt::format("Unknown shader file extension '{}'.", extension).c_str());
+			warning(fmt::format("Unknown shader file extension '{}'.", extension));
 			continue;
 		}
 

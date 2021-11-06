@@ -1,9 +1,9 @@
 #include <thread>
 
 #include <b2/exception.hpp>
+#include <b2/logger.hpp>
 #include <glm/gtc/random.hpp>
 
-#include "logger.hpp"
 #include "physics.hpp"
 #include "threadpool.hpp"
 
