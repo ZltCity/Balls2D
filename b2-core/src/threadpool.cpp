@@ -1,6 +1,5 @@
 #include <cassert>
 
-#include <b2/exception.hpp>
 #include <b2/logger.hpp>
 
 #include "threadpool.hpp"
@@ -10,9 +9,7 @@ namespace b2
 
 ThreadPool::ThreadPool(size_t workerCount) : workers(workerCount), alarm(false), alive(true)
 {
-	_assert(!workers.empty(), 0x620a358f);
-
-	info1(fmt::format("Threads count: {}", workers.size()));
+	info(fmt::format("Threads count: {}", workers.size()));
 
 	for (ThreadPtr &thread : workers)
 		thread = std::make_unique<std::thread>(workerRoutine, this);

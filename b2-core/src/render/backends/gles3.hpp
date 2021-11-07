@@ -5,7 +5,6 @@
 
 #include <GLES3/gl3.h>
 
-#include <b2/exception.hpp>
 #include <b2/logger.hpp>
 #include <glm/glm.hpp>
 
@@ -33,7 +32,7 @@ private:
 	void (*deleter)(GLuint);
 };
 
-uint32_t b2ErrorCode(GLenum error);
+std::string toString(GLenum error);
 
 GLhandle::GLhandle() noexcept : handle(0), deleter(nullptr)
 {}
@@ -93,7 +92,8 @@ auto _i(F f, Args... args) -> typename std::invoke_result<F, Args...>::type
 	auto _glassert = []() {
 		GLenum error = glGetError();
 
-		_assert(error == GL_NO_ERROR, b2ErrorCode(error));
+		if (error != GL_NO_ERROR)
+			throw std::runtime_error(fmt::format("GLES3 error: {}.", toString(error)));
 	};
 
 	if constexpr (std::is_void_v<Result>)

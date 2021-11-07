@@ -39,11 +39,11 @@ private:
 
 std::string toString(LogLevel level);
 
-inline void info1(const std::string &message);
+inline void info(const std::string &message);
 inline void warning(const std::string &message);
 inline void error(const std::string &message);
 
-void info1(const std::string &message)
+void info(const std::string &message)
 {
 	Logger::getInstance().log(LogLevel::Info, message);
 }

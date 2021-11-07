@@ -3,15 +3,17 @@
 namespace b2::render::backends::gles3
 {
 
-uint32_t b2ErrorCode(GLenum error)
+std::string toString(GLenum error)
 {
 	switch (error)
 	{
-		case GL_INVALID_ENUM: return 0x9800a19c;
-		case GL_INVALID_VALUE: return 0x636e76a1;
-		case GL_INVALID_OPERATION: return 0x02f3f490;
-		case GL_OUT_OF_MEMORY: return 0x8e699b5d;
-		default: return 0x0;
+		case GL_NO_ERROR: return {"GL_NO_ERROR"};
+		case GL_INVALID_ENUM: return {"GL_INVALID_ENUM"};
+		case GL_INVALID_VALUE: return {"GL_INVALID_VALUE"};
+		case GL_INVALID_OPERATION: return {"GL_INVALID_OPERATION"};
+		case GL_INVALID_FRAMEBUFFER_OPERATION: return {"GL_INVALID_FRAMEBUFFER_OPERATION"};
+		case GL_OUT_OF_MEMORY: return {"GL_OUT_OF_MEMORY"};
+		default: return {};
 	}
 }
 

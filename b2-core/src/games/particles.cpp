@@ -2,7 +2,6 @@
 #include <random>
 
 #include <b2/bytebuffer.hpp>
-#include <b2/exception.hpp>
 #include <b2/logger.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <nlohmann/json.hpp>
@@ -61,7 +60,7 @@ void ParticlesGame::update()
 
 	if (elapsed >= 1000.0f)
 	{
-		info1(fmt::format("Physics: {}, Render: {}", pTime / float(frames), rTime / float(frames)));
+		info(fmt::format("Physics: {}, Render: {}", pTime / float(frames), rTime / float(frames)));
 
 		frames = 0;
 		elapsed = pTime = rTime = 0.0f;
@@ -75,8 +74,8 @@ void ParticlesGame::onSensorsEvent(const glm::vec3 &acceleration)
 
 void ParticlesGame::initLogic(const glm::ivec2 &surfaceSize, size_t gridWidth, size_t particlesCount)
 {
-	_assert(gridWidth > 0, 0xd78eead8);
-	_assert(particlesCount > 0, 0xd78eead8);
+	assert(gridWidth > 0);
+	assert(particlesCount > 0);
 
 	gridSize = glm::ivec3(gridWidth, int32_t(gridWidth * float(surfaceSize.y) / surfaceSize.x), gridWidth);
 

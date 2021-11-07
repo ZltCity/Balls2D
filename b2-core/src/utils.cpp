@@ -1,6 +1,6 @@
 #include <fstream>
 
-#include <b2/exception.hpp>
+#include <fmt/format.h>
 
 #include "utils.hpp"
 
@@ -11,7 +11,8 @@ Bytebuffer readFile(const std::filesystem::path &path)
 {
 	std::fstream stream(path, std::ios::in | std::ios::binary);
 
-	_assert(stream.is_open(), 0x0f77c02e);
+	if (!stream.is_open())
+		throw std::runtime_error(fmt::format("Unable to open file '{}'.", path.string()));
 
 	stream.seekg(0, std::fstream::end);
 

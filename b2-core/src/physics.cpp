@@ -1,6 +1,5 @@
 #include <thread>
 
-#include <b2/exception.hpp>
 #include <b2/logger.hpp>
 #include <glm/gtc/random.hpp>
 
@@ -115,7 +114,8 @@ void ParticleCloud::fill(bool singleThread)
 			Cell &cell = grid.cells[cellIdx];
 			const uint8_t cellFilling = cell.count++;
 
-			_assert(cellFilling < cellCapacity, 0x4f62c1fa);
+			if (cellFilling >= cellCapacity)
+				throw std::runtime_error("Cell capacity is exceeded.");
 
 			cell.slots[cellFilling] = i;
 		}

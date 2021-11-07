@@ -10,7 +10,6 @@ add_library(b2-core STATIC
 	src/application.cpp
 	src/camera.cpp
 	src/config.cpp
-	src/exception.cpp
 	src/game.cpp
 	src/gearbox.cpp
 	src/isosurface.cpp

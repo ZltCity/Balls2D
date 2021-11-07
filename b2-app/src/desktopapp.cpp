@@ -1,6 +1,5 @@
 #include <fstream>
 
-#include <b2/exception.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "desktopapp.hpp"
@@ -16,7 +15,8 @@ DesktopApplication::DesktopApplication() : firstRun(true)
 		SDL_CreateWindow("BlueWater 2", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 900, 900, SDL_WINDOW_OPENGL),
 		[](SDL_Window *window) { SDL_DestroyWindow(window); });
 
-	_assert(window != nullptr, 0xe18e3ae1);
+	if (window == nullptr)
+		throw std::runtime_error("Unable to create window.");
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -28,7 +28,8 @@ DesktopApplication::DesktopApplication() : firstRun(true)
 	glContext.reset(
 		SDL_GL_CreateContext(this->window.get()), [](SDL_GLContext context) { SDL_GL_DeleteContext(context); });
 
-	_assert(glContext != nullptr, 0xd6a07fa8);
+	if (glContext == nullptr)
+		throw std::runtime_error("Unable to create GL context.");
 
 	SDL_GL_MakeCurrent(this->window.get(), glContext.get());
 }

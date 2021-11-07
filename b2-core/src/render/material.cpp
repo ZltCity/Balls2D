@@ -35,7 +35,7 @@ Material::Material(const std::vector<Shader> &shaders, std::vector<Uniform> unif
 		log.resize(logLength + 1, 0);
 		_i(glGetProgramInfoLog, GLuint(program), logLength, nullptr, reinterpret_cast<GLchar *>(log.data()));
 
-		throw Exception(0x1229cb91, log);
+		throw std::runtime_error(fmt::format("Shader program linkage error: {}.", log));
 	}
 }
 
@@ -53,7 +53,7 @@ gles3::GLhandle Material::loadShader(const Shader &shader)
 {
 	using namespace gles3;
 
-	_assert(!shader.source.empty(), 0x461f5dfa);
+	assert(!shader.source.empty());
 
 	GLhandle handle(_i(glCreateShader, GLenum(shader.type)), [](GLuint id) { _i(glDeleteShader, id); });
 	auto source = reinterpret_cast<const GLchar *>(shader.source.data());
@@ -73,7 +73,7 @@ gles3::GLhandle Material::loadShader(const Shader &shader)
 		log.resize(logLength + 1, 0);
 		_i(glGetShaderInfoLog, GLuint(handle), logLength, nullptr, reinterpret_cast<GLchar *>(log.data()));
 
-		throw Exception(0x8909b556, log);
+		throw std::runtime_error(fmt::format("Shader compilation error: {}.", log));
 	}
 
 	return handle;
