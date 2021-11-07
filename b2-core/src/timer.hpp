@@ -12,12 +12,10 @@ public:
 
 	float getDeltaMs(bool reset = true);
 
-	static uint64_t getTimestamp();
-
 private:
 	using clock = std::chrono::high_resolution_clock;
 
 	clock::time_point last;
 };
 
-} // namespace b2-core
+} // namespace b2

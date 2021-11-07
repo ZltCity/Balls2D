@@ -19,9 +19,4 @@ float Timer::getDeltaMs(bool reset)
 	return delta.count();
 }
 
-uint64_t Timer::getTimestamp()
-{
-	return clock::now().time_since_epoch().count();
-}
-
 } // namespace b2-core
