@@ -1,5 +1,4 @@
-bin/
-lib/
-ext/
 build/
-msvs2015/
+install
+.idea/
+.cxx/
